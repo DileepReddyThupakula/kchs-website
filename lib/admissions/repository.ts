@@ -15,17 +15,29 @@ type CreatedAdmissionEnquiryRow = {
 };
 
 export class AdmissionEnquiryPersistenceError extends Error {
-  constructor() {
+  constructor(readonly category: "configuration" | "database-response" | "database-query" = "database-query") {
     super("Admission enquiry persistence failed.");
     this.name = "AdmissionEnquiryPersistenceError";
   }
+}
+
+function getSafeDatabaseErrorMetadata(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return { category: "unknown" };
+  }
+
+  const candidate = error as { code?: unknown; name?: unknown };
+  const code = typeof candidate.code === "string" && /^[0-9A-Z]{5}$/.test(candidate.code) ? candidate.code : undefined;
+  const name = typeof candidate.name === "string" ? candidate.name : "UnknownError";
+
+  return { category: "database-query", code, name };
 }
 
 function createDatabaseClient() {
   const connectionString = process.env.POSTGRES_URL;
 
   if (!connectionString) {
-    throw new AdmissionEnquiryPersistenceError();
+    throw new AdmissionEnquiryPersistenceError("configuration");
   }
 
   return postgres(connectionString, {
@@ -37,9 +49,10 @@ function createDatabaseClient() {
 }
 
 export async function createAdmissionEnquiry(input: AdmissionEnquiryInput): Promise<CreatedAdmissionEnquiry> {
-  const sql = createDatabaseClient();
+  let sql: ReturnType<typeof createDatabaseClient> | undefined;
 
   try {
+    sql = createDatabaseClient();
     const [enquiry] = await sql<CreatedAdmissionEnquiryRow[]>`
       insert into public.admission_enquiries (
         guardian_name,
@@ -60,18 +73,25 @@ export async function createAdmissionEnquiry(input: AdmissionEnquiryInput): Prom
     `;
 
     if (!enquiry) {
-      throw new AdmissionEnquiryPersistenceError();
+      throw new AdmissionEnquiryPersistenceError("database-response");
     }
 
     return { id: enquiry.id, createdAt: enquiry.created_at };
   } catch (error) {
     if (error instanceof AdmissionEnquiryPersistenceError) {
+      console.error("Admission enquiry persistence failed.", { category: error.category });
       throw error;
     }
 
-    console.error("Admission enquiry persistence failed.");
+    console.error("Admission enquiry persistence failed.", getSafeDatabaseErrorMetadata(error));
     throw new AdmissionEnquiryPersistenceError();
   } finally {
-    await sql.end({ timeout: 5 });
+    if (sql) {
+      try {
+        await sql.end({ timeout: 5 });
+      } catch {
+        console.error("Admission database connection cleanup failed.", { category: "connection-cleanup" });
+      }
+    }
   }
 }
