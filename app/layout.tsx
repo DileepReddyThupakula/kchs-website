@@ -3,6 +3,7 @@ import "./globals.css";
 import "./polish.css";
 import "./phase-two.css";
 import "./compact-internal-pages.css";
+import "./contact-information.css";
 
 export const metadata: Metadata = {
   title: { default: "Krishna Chaitanya High School | Yerraguntla", template: "%s | KCHS" },
