@@ -29,12 +29,16 @@ The public site uses carefully labelled remote placeholder images from Unsplash.
 
 The management system is an interface and information-architecture foundation only. It does not contain a production database, credentials, live school records, or authentication. Before staff use, connect an approved identity provider, enforce server-side Admin/Teacher roles, configure a database, audit logging and backups.
 
-## Admissions persistence foundation
+## Admissions persistence
 
-The repository includes an additive Postgres migration at `supabase/migrations/20260821180000_create_admission_enquiries.sql`. It creates the `admission_enquiries` table, UUID identifiers, database-generated timestamps, status model, indexes, and Row Level Security with no public access policies.
+Admissions enquiries are persisted server-side in Supabase Postgres. The repository uses a focused data-access module at `lib/admissions/repository.ts`, backed by the Vercel-provided pooled `POSTGRES_URL` runtime variable. It uses parameterized SQL and returns only the database-generated enquiry ID and creation timestamp to the Server Action.
 
-Persistence is **not configured or operational yet**. Configure a server-only `DATABASE_URL` in Vercel and `.env.local`, use a serverless-compatible Postgres/Supabase connection, and apply the reviewed migration through the chosen provider’s migration workflow. Only then should a server-side repository be connected to the admissions Server Action.
+The additive migration at `supabase/migrations/20260821180000_create_admission_enquiries.sql` creates the private `admission_enquiries` table, UUID identifiers, database-generated timestamps, status model, indexes, and Row Level Security with no public access policies. Apply it through the linked Supabase project's migration workflow; do not run it again after it has been recorded remotely.
 
-The form now shares a Zod validation schema in `lib/admissions/schema.ts`, including the exact class allowlist, Indian mobile normalization to `+91XXXXXXXXXX`, optional email/message normalization, field limits, and a hidden honeypot check. A distributed rate-limit store is not configured; an in-memory limiter is intentionally not used on Vercel.
+The form shares a Zod validation schema in `lib/admissions/schema.ts`, including the exact class allowlist, Indian mobile normalization to `+91XXXXXXXXXX`, optional email/message normalization, field limits, and a hidden honeypot check. The database is the source of truth: a missing or failed webhook cannot make a saved enquiry fail. A distributed rate-limit store is not configured; an in-memory limiter is intentionally not used on Vercel.
 
-`ADMISSIONS_WEBHOOK_URL` remains optional. Once persistence is enabled, it should notify only after a successful database write; a notification failure must not discard the saved enquiry.
+`ADMISSIONS_WEBHOOK_URL` remains optional and is called only after a successful database write. Its failure is logged without enquiry details and does not discard or invalidate the saved enquiry.
+
+### Local development and security
+
+Use a non-production local database environment when available. Vercel Sensitive production variables may not be retrievable as usable plaintext locally; the production deployment receives the server-only integration variables at runtime. Never expose `POSTGRES_URL`, Supabase secret/service keys, or database credentials to client-side code, and never commit `.env.local`, `.env.production.local`, or `.vercel`.

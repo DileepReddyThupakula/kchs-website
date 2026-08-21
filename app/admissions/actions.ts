@@ -1,6 +1,7 @@
 "use server";
 
 import { admissionEnquirySchema } from "@/lib/admissions/schema";
+import { createAdmissionEnquiry } from "@/lib/admissions/repository";
 
 export type EnquiryState = {
   status: "idle" | "success" | "error";
@@ -28,19 +29,36 @@ export async function submitEnquiry(_previous: EnquiryState, formData: FormData)
   }
   const { guardianName, studentName, classSeeking, phoneNumber, emailAddress, message } = result.data;
 
-  const webhook = process.env.ADMISSIONS_WEBHOOK_URL;
-  if (!webhook) return { status: "error", message: "Online enquiries are not configured yet. Please contact the school office; contact details will be updated shortly." };
-
   try {
-    const response = await fetch(webhook, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guardianName, studentName, classSeeking, phoneNumber, emailAddress: emailAddress || undefined, message: message || undefined, receivedAt: new Date().toISOString() }),
-      cache: "no-store",
-    });
-    if (!response.ok) throw new Error("Enquiry endpoint rejected the request");
+    const enquiry = await createAdmissionEnquiry({ guardianName, studentName, classSeeking, phoneNumber, emailAddress, message });
+    const webhook = process.env.ADMISSIONS_WEBHOOK_URL;
+
+    if (webhook) {
+      try {
+        const response = await fetch(webhook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            enquiryId: enquiry.id,
+            guardianName,
+            studentName,
+            classSeeking,
+            phoneNumber,
+            emailAddress: emailAddress || undefined,
+            message: message || undefined,
+            receivedAt: enquiry.createdAt,
+          }),
+          cache: "no-store",
+        });
+
+        if (!response.ok) throw new Error("Admission webhook rejected the notification.");
+      } catch {
+        console.error("Admission enquiry notification failed after persistence.");
+      }
+    }
+
     return { status: "success", message: "Thank you. Your enquiry has been received and the school will be in touch." };
   } catch {
-    return { status: "error", message: "We could not submit your enquiry at this time. Please try again later or contact the school office." };
+    return { status: "error", message: "We couldn't submit your enquiry right now. Please try again or call the school office." };
   }
 }
