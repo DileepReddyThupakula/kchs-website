@@ -6,7 +6,8 @@ const optionalText = (maximum: number) => z.string().trim().max(maximum).transfo
 
 function normalizeIndianPhone(value: string) {
   const compact = value.trim().replace(/[\s().-]/g, "");
-  const digits = compact.startsWith("+91") ? compact.slice(3) : compact;
+  const countryCodeDigits = compact.startsWith("+") ? compact.slice(1) : compact;
+  const digits = countryCodeDigits.startsWith("91") && countryCodeDigits.length === 12 ? countryCodeDigits.slice(2) : countryCodeDigits;
   if (!/^[6-9]\d{9}$/.test(digits)) return null;
   return `+91${digits}`;
 }
