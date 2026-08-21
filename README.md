@@ -29,8 +29,12 @@ The public site uses carefully labelled remote placeholder images from Unsplash.
 
 The management system is an interface and information-architecture foundation only. It does not contain a production database, credentials, live school records, or authentication. Before staff use, connect an approved identity provider, enforce server-side Admin/Teacher roles, configure a database, audit logging and backups.
 
-## Admissions enquiry integration
+## Admissions persistence foundation
 
-The admissions form uses a Server Action to validate enquiries on the server. It only confirms success when the optional `ADMISSIONS_WEBHOOK_URL` server environment variable is configured and its endpoint accepts the request.
+The repository includes an additive Postgres migration at `supabase/migrations/20260821180000_create_admission_enquiries.sql`. It creates the `admission_enquiries` table, UUID identifiers, database-generated timestamps, status model, indexes, and Row Level Security with no public access policies.
 
-Configure this value in Vercel (and locally in `.env.local`) with a secure HTTPS endpoint that stores the validated enquiry and/or notifies the school. The endpoint should accept a JSON POST body. Without it, the form fails safely and does not claim that an enquiry has been stored.
+Persistence is **not configured or operational yet**. Configure a server-only `DATABASE_URL` in Vercel and `.env.local`, use a serverless-compatible Postgres/Supabase connection, and apply the reviewed migration through the chosen provider’s migration workflow. Only then should a server-side repository be connected to the admissions Server Action.
+
+The form now shares a Zod validation schema in `lib/admissions/schema.ts`, including the exact class allowlist, Indian mobile normalization to `+91XXXXXXXXXX`, optional email/message normalization, field limits, and a hidden honeypot check. A distributed rate-limit store is not configured; an in-memory limiter is intentionally not used on Vercel.
+
+`ADMISSIONS_WEBHOOK_URL` remains optional. Once persistence is enabled, it should notify only after a successful database write; a notification failure must not discard the saved enquiry.

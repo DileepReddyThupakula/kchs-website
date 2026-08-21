@@ -12,6 +12,7 @@ export default function AdmissionForm() {
   return <form action={formAction} className="enquiry-form" noValidate>
     <div className="form-heading"><p className="eyebrow">Admission Enquiry</p><h2>Tell us about<br /><em>your child.</em></h2><p>Fields marked <b>*</b> are required.</p></div>
     <div className="form-grid">
+      <div className="honeypot" aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
       <label>Parent / Guardian Name <b>*</b><input name="guardianName" autoComplete="name" aria-invalid={Boolean(error("guardianName"))} aria-describedby={error("guardianName") ? "guardianName-error" : undefined} />{error("guardianName") && <small id="guardianName-error" className="field-error">{error("guardianName")}</small>}</label>
       <label>Student Name <b>*</b><input name="studentName" autoComplete="off" aria-invalid={Boolean(error("studentName"))} aria-describedby={error("studentName") ? "studentName-error" : undefined} />{error("studentName") && <small id="studentName-error" className="field-error">{error("studentName")}</small>}</label>
       <label>Class Seeking Admission <b>*</b><select name="classSeeking" defaultValue="" aria-invalid={Boolean(error("classSeeking"))} aria-describedby={error("classSeeking") ? "classSeeking-error" : undefined}><option value="" disabled>Select a class</option>{classes.map((item) => <option key={item}>{item}</option>)}</select>{error("classSeeking") && <small id="classSeeking-error" className="field-error">{error("classSeeking")}</small>}</label>

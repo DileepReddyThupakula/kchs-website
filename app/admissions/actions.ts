@@ -1,27 +1,32 @@
 "use server";
 
+import { admissionEnquirySchema } from "@/lib/admissions/schema";
+
 export type EnquiryState = {
   status: "idle" | "success" | "error";
   message?: string;
   errors?: Partial<Record<"guardianName" | "studentName" | "classSeeking" | "phoneNumber" | "emailAddress", string>>;
 };
 
-function value(formData: FormData, name: string) { return String(formData.get(name) ?? "").trim(); }
-
 export async function submitEnquiry(_previous: EnquiryState, formData: FormData): Promise<EnquiryState> {
-  const guardianName = value(formData, "guardianName");
-  const studentName = value(formData, "studentName");
-  const classSeeking = value(formData, "classSeeking");
-  const phoneNumber = value(formData, "phoneNumber");
-  const emailAddress = value(formData, "emailAddress");
-  const message = value(formData, "message");
-  const errors: EnquiryState["errors"] = {};
-  if (guardianName.length < 2) errors.guardianName = "Please enter the parent or guardian’s name.";
-  if (studentName.length < 2) errors.studentName = "Please enter the student’s name.";
-  if (!classSeeking) errors.classSeeking = "Please select the class seeking admission.";
-  if (!/^[0-9+()\-\s]{7,20}$/.test(phoneNumber)) errors.phoneNumber = "Please enter a valid phone number.";
-  if (emailAddress && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress)) errors.emailAddress = "Please enter a valid email address.";
-  if (Object.keys(errors).length) return { status: "error", message: "Please correct the highlighted fields.", errors };
+  if (String(formData.get("website") ?? "").trim()) return { status: "error", message: "We could not submit your enquiry at this time." };
+  const result = admissionEnquirySchema.safeParse({
+    guardianName: formData.get("guardianName"),
+    studentName: formData.get("studentName"),
+    classSeeking: formData.get("classSeeking"),
+    phoneNumber: formData.get("phoneNumber"),
+    emailAddress: formData.get("emailAddress"),
+    message: formData.get("message"),
+  });
+  if (!result.success) {
+    const errors: EnquiryState["errors"] = {};
+    for (const issue of result.error.issues) {
+      const field = issue.path[0];
+      if (typeof field === "string" && field in { guardianName: true, studentName: true, classSeeking: true, phoneNumber: true, emailAddress: true }) errors[field as keyof NonNullable<EnquiryState["errors"]>] ??= issue.message;
+    }
+    return { status: "error", message: "Please correct the highlighted fields.", errors };
+  }
+  const { guardianName, studentName, classSeeking, phoneNumber, emailAddress, message } = result.data;
 
   const webhook = process.env.ADMISSIONS_WEBHOOK_URL;
   if (!webhook) return { status: "error", message: "Online enquiries are not configured yet. Please contact the school office; contact details will be updated shortly." };
