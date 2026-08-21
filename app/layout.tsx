@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./polish.css";
 import "./phase-two.css";
+import "./compact-internal-pages.css";
 
 export const metadata: Metadata = {
   title: { default: "Krishna Chaitanya High School | Yerraguntla", template: "%s | KCHS" },
