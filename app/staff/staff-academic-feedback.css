@@ -1,0 +1,18 @@
+.academic-feedback {
+  border: 1px solid;
+  margin: 14px 0;
+  max-width: 900px;
+  padding: 12px 15px;
+}
+
+.academic-feedback-success {
+  background: #edf5ed;
+  border-color: #a9c8aa;
+  color: #285d3b;
+}
+
+.academic-feedback-error {
+  background: #fbf1ec;
+  border-color: #d9ad97;
+  color: #873d25;
+}

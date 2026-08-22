@@ -22,6 +22,7 @@ import "./staff-faculty.css";
 import "./staff-members.css";
 import "./staff-academics.css";
 import "./staff-cosmetics.css";
+import "./staff-academic-feedback.css";
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const staff = await requireStaff();
