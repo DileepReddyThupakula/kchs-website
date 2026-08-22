@@ -12,6 +12,7 @@ export function StaffNavigation() {
   const dashboardActive = pathname === "/staff";
   const admissionsActive = pathname.startsWith("/staff/admissions");
   const noticesActive = pathname.startsWith("/staff/notices");
+  const eventsActive = pathname.startsWith("/staff/events");
 
   return <nav className="staff-nav" aria-label="Staff portal navigation">
     <p className="staff-nav-label">Main</p>
@@ -20,6 +21,7 @@ export function StaffNavigation() {
     <Link href="/staff/admissions" className={navigationClass(admissionsActive)} aria-current={admissionsActive ? "page" : undefined}><span aria-hidden="true">◇</span> Enquiries</Link>
     <p className="staff-nav-label staff-nav-spacer">Communication</p>
     <Link href="/staff/notices" className={navigationClass(noticesActive)} aria-current={noticesActive ? "page" : undefined}><span aria-hidden="true">✦</span> Notices</Link>
+    <Link href="/staff/events" className={navigationClass(eventsActive)} aria-current={eventsActive ? "page" : undefined}><span aria-hidden="true">◌</span> Events</Link>
     <p className="staff-nav-label staff-nav-spacer">Public website</p>
     <Link href="/"><span aria-hidden="true">↗</span> View website</Link>
   </nav>;

@@ -6,12 +6,14 @@ import { z } from "zod";
 
 import { admissionStatusSchema } from "@/lib/staff/admissions";
 import { requireStaff } from "@/lib/staff/auth";
+import { eventStatusSchema, eventTypeSchema } from "@/lib/events";
 import { noticePrioritySchema, noticeStatusSchema } from "@/lib/notices";
 import { createClient } from "@/lib/supabase/server";
 
 const idSchema = z.string().uuid();
 const notesSchema = z.string().trim().max(4000).transform((value) => value || null);
 const noticeIdSchema = z.string().uuid();
+const eventIdSchema = z.string().uuid();
 const noticeFormSchema = z.object({
   content: z.string().trim().min(1, "Content is required.").max(6000, "Content must be 6,000 characters or fewer."),
   expiresAt: z.string().trim().max(32),
@@ -19,6 +21,15 @@ const noticeFormSchema = z.object({
   publishedAt: z.string().trim().max(32),
   status: noticeStatusSchema,
   summary: z.string().trim().max(400, "Summary must be 400 characters or fewer."),
+  title: z.string().trim().min(1, "Title is required.").max(180, "Title must be 180 characters or fewer."),
+});
+const eventFormSchema = z.object({
+  description: z.string().trim().max(6000, "Description must be 6,000 characters or fewer."),
+  endAt: z.string().trim().max(32),
+  eventType: eventTypeSchema,
+  location: z.string().trim().max(240, "Location must be 240 characters or fewer."),
+  startAt: z.string().trim().min(1, "Start date and time are required.").max(32),
+  status: eventStatusSchema,
   title: z.string().trim().min(1, "Title is required.").max(180, "Title must be 180 characters or fewer."),
 });
 
@@ -56,6 +67,23 @@ function getNoticeInput(formData: FormData) {
     summary: parsed.data.summary || null,
     title: parsed.data.title,
   };
+}
+
+function getEventInput(formData: FormData) {
+  const parsed = eventFormSchema.safeParse({
+    description: formData.get("description"),
+    endAt: formData.get("endAt"),
+    eventType: formData.get("eventType"),
+    location: formData.get("location"),
+    startAt: formData.get("startAt"),
+    status: formData.get("status"),
+    title: formData.get("title"),
+  });
+  if (!parsed.success) return null;
+  const startAt = parseIndianDateTime(parsed.data.startAt);
+  const endAt = parseIndianDateTime(parsed.data.endAt);
+  if (!startAt || endAt === undefined || (endAt && new Date(endAt) < new Date(startAt))) return null;
+  return { description: parsed.data.description || null, end_at: endAt, event_type: parsed.data.eventType, is_public: formData.get("isPublic") === "on", location: parsed.data.location || null, start_at: startAt, status: parsed.data.status, title: parsed.data.title };
 }
 
 export async function signOutStaff() {
@@ -156,4 +184,35 @@ export async function archiveNotice(formData: FormData) {
   revalidatePath("/staff");
   revalidatePath("/staff/notices");
   redirect(`/staff/notices/${id.data}/edit?updated=archived`);
+}
+
+export async function createEvent(formData: FormData) {
+  await requireStaff();
+  const input = getEventInput(formData);
+  if (!input) redirect("/staff/events/new?error=invalid");
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("events").insert(input).select("id").single();
+  if (error || !data) { console.error("Staff event creation failed.", { category: "database-query", code: error?.code }); redirect("/staff/events/new?error=save"); }
+  revalidatePath("/"); revalidatePath("/staff"); revalidatePath("/staff/events");
+  redirect(`/staff/events/${data.id}/edit?created=${input.status}`);
+}
+
+export async function updateEvent(formData: FormData) {
+  await requireStaff();
+  const id = eventIdSchema.safeParse(formData.get("id")); const input = getEventInput(formData);
+  if (!id.success) redirect("/staff/events?error=update");
+  if (!input) redirect(`/staff/events/${id.data}/edit?error=invalid`);
+  const { error } = await (await createClient()).from("events").update(input).eq("id", id.data);
+  if (error) { console.error("Staff event update failed.", { category: "database-query", code: error.code }); redirect(`/staff/events/${id.data}/edit?error=save`); }
+  revalidatePath("/"); revalidatePath("/staff"); revalidatePath("/staff/events");
+  redirect(`/staff/events/${id.data}/edit?updated=${input.status}`);
+}
+
+export async function archiveEvent(formData: FormData) {
+  await requireStaff(); const id = eventIdSchema.safeParse(formData.get("id"));
+  if (!id.success) redirect("/staff/events?error=update");
+  const { error } = await (await createClient()).from("events").update({ status: "archived" }).eq("id", id.data);
+  if (error) { console.error("Staff event archive failed.", { category: "database-query", code: error.code }); redirect(`/staff/events/${id.data}/edit?error=save`); }
+  revalidatePath("/"); revalidatePath("/staff"); revalidatePath("/staff/events");
+  redirect(`/staff/events/${id.data}/edit?updated=archived`);
 }

@@ -14,6 +14,7 @@ import "./staff-dashboard.css";
 import "./staff-navigation.css";
 import "./staff-notices.css";
 import "./staff-notice-workflow.css";
+import "./staff-events.css";
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const staff = await requireStaff();
