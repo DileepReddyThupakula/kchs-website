@@ -31,7 +31,7 @@ export type Notice = {
 
 export type PublicNotice = Pick<Notice, "expires_at" | "id" | "priority" | "published_at" | "summary" | "title">;
 export type NoticeFilters = { search?: string; status?: string };
-export type StaffNotices = { filtersActive: boolean; notices: Notice[]; total: number };
+export type StaffNotices = { filtersActive: boolean; notices: Notice[]; queryFailed: boolean; total: number };
 export type StaffNoticesOverview = { drafts: number; published: number; recent: Pick<Notice, "id" | "status" | "title" | "updated_at"> | null };
 
 const noticeFields = "id, title, summary, content, status, priority, published_at, expires_at, created_at, updated_at";
@@ -48,19 +48,32 @@ function hasValidStatus(value: string | undefined): value is NoticeStatus {
   return noticeStatusSchema.safeParse(value).success;
 }
 
+function parseNoticeDate(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function logNoticeDatabaseError(operation: string, error: { code?: string; details?: string; hint?: string; message?: string }) {
+  console.error(operation, { category: "database-query", code: error.code, details: error.details, hint: error.hint, message: error.message });
+}
+
 export function formatNoticeDate(value: string | null) {
-  if (!value) return "Not set";
-  return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(value));
+  const date = parseNoticeDate(value);
+  if (!date) return "Not set";
+  return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(date);
 }
 
 export function formatNoticeDateTime(value: string | null) {
-  if (!value) return "Not set";
-  return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date(value));
+  const date = parseNoticeDate(value);
+  if (!date) return "Not set";
+  return new Intl.DateTimeFormat("en-IN", { day: "numeric", hour: "numeric", minute: "2-digit", month: "short", timeZone: "Asia/Kolkata", year: "numeric" }).format(date);
 }
 
 export function formatNoticeDateTimeInput(value: string | null) {
-  if (!value) return "";
-  const parts = new Intl.DateTimeFormat("en-CA", { day: "2-digit", hour: "2-digit", hour12: false, minute: "2-digit", month: "2-digit", timeZone: "Asia/Kolkata", year: "numeric" }).formatToParts(new Date(value));
+  const date = parseNoticeDate(value);
+  if (!date) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", { day: "2-digit", hour: "2-digit", hour12: false, minute: "2-digit", month: "2-digit", timeZone: "Asia/Kolkata", year: "numeric" }).formatToParts(date);
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
   return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
 }
@@ -84,9 +97,12 @@ export async function getStaffNotices(filters: NoticeFilters): Promise<StaffNoti
   ]);
   const error = listResult.error ?? totalResult.error;
   logStaffPerformance("staff-notices-list", startedAt, error ? "failed" : "success");
-  if (error) console.error("Staff notices list failed.", { category: "database-query", code: error.code });
+  if (error) {
+    logNoticeDatabaseError("Staff notices list failed.", error);
+    return { filtersActive: Boolean(status || search), notices: [], queryFailed: true, total: 0 };
+  }
 
-  return { filtersActive: Boolean(status || search), notices: (listResult.data ?? []) as Notice[], total: totalResult.count ?? 0 };
+  return { filtersActive: Boolean(status || search), notices: (listResult.data ?? []) as Notice[], queryFailed: false, total: totalResult.count ?? 0 };
 }
 
 export async function getStaffNotice(id: string): Promise<Notice | null> {
@@ -94,7 +110,7 @@ export async function getStaffNotice(id: string): Promise<Notice | null> {
   if (!z.string().uuid().safeParse(id).success) return null;
   const supabase = await createClient();
   const { data, error } = await supabase.from("notices").select(noticeFields).eq("id", id).maybeSingle();
-  if (error) console.error("Staff notice detail failed.", { category: "database-query", code: error.code });
+  if (error) logNoticeDatabaseError("Staff notice detail failed.", error);
   return data as Notice | null;
 }
 
@@ -109,7 +125,7 @@ export async function getStaffNoticesOverview(): Promise<StaffNoticesOverview> {
   ]);
   const error = publishedResult.error ?? draftsResult.error ?? recentResult.error;
   logStaffPerformance("staff-notices-overview", startedAt, error ? "failed" : "success");
-  if (error) console.error("Staff notices overview failed.", { category: "database-query", code: error.code });
+  if (error) logNoticeDatabaseError("Staff notices overview failed.", error);
   return { drafts: draftsResult.count ?? 0, published: publishedResult.count ?? 0, recent: recentResult.data as StaffNoticesOverview["recent"] };
 }
 
@@ -124,6 +140,6 @@ export async function getPublicNotices(): Promise<PublicNotice[]> {
     .or(`expires_at.is.null,expires_at.gt.${now}`)
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(3);
-  if (error) console.error("Public notices list failed.", { category: "database-query", code: error.code });
+  if (error) logNoticeDatabaseError("Public notices list failed.", error);
   return (data ?? []) as PublicNotice[];
 }
