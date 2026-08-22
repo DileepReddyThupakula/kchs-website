@@ -6,6 +6,7 @@ import { signOutStaff } from "@/app/staff/actions";
 import { requireStaff } from "@/lib/staff/auth";
 
 import "../staff.css";
+import "./staff-detail.css";
 import "./staff-mobile.css";
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
