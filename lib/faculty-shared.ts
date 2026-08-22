@@ -1,0 +1,3 @@
+export const facultyDepartments = ["leadership", "teaching_staff", "primary", "mathematics", "science", "social_studies", "english", "telugu", "hindi", "physical_education", "administration", "support_staff", "other"] as const;
+export type FacultyDepartment = (typeof facultyDepartments)[number];
+export const facultyDepartmentLabels: Record<FacultyDepartment, string> = { leadership: "Leadership", teaching_staff: "Teaching Staff", primary: "Primary", mathematics: "Mathematics", science: "Science", social_studies: "Social Studies", english: "English", telugu: "Telugu", hindi: "Hindi", physical_education: "Physical Education", administration: "Administration", support_staff: "Support Staff", other: "Other" };

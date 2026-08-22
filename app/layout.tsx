@@ -6,6 +6,7 @@ import "./compact-internal-pages.css";
 import "./contact-information.css";
 import "./events.css";
 import "./gallery.css";
+import "./faculty.css";
 
 export const metadata: Metadata = {
   title: { default: "Krishna Chaitanya High School | Yerraguntla", template: "%s | KCHS" },
