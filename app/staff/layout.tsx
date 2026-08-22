@@ -21,6 +21,8 @@ import "./staff-documents.css";
 import "./staff-faculty.css";
 import "./staff-members.css";
 import "./staff-academics.css";
+import "./staff-academic-editors.css";
+import "./staff-academic-mobile-actions.css";
 import "./staff-cosmetics.css";
 import "./staff-academic-feedback.css";
 
