@@ -1,0 +1,1 @@
+import Link from"next/link";import{AcademicManagement}from"@/components/academic-management";export default function Page(){return <><Link className="staff-back" href="/staff/academics">← Academic structure</Link><AcademicManagement view="sections"/></>}

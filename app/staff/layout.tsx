@@ -20,6 +20,8 @@ import "./staff-gallery.css";
 import "./staff-documents.css";
 import "./staff-faculty.css";
 import "./staff-members.css";
+import "./staff-academics.css";
+import "./staff-cosmetics.css";
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const staff = await requireStaff();
