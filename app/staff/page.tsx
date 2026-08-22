@@ -3,7 +3,7 @@ import Link from "next/link";
 import { admissionClasses } from "@/lib/admissions/schema";
 import { admissionStatusLabels, admissionStatuses, formatAdmissionDate, formatAdmissionTime, getAdmissionsDashboard } from "@/lib/staff/admissions";
 
-const summaryStatuses = ["new", "contacted", "follow_up", "admitted"] as const;
+const summaryStatuses = ["new", "contacted", "follow_up", "admitted", "closed"] as const;
 
 export default async function StaffAdmissionsPage({ searchParams }: { searchParams: Promise<{ class?: string; q?: string; status?: string }> }) {
   const filters = await searchParams;

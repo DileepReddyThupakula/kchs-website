@@ -8,6 +8,7 @@ import { requireStaff } from "@/lib/staff/auth";
 import "../staff.css";
 import "./staff-detail.css";
 import "./staff-mobile.css";
+import "./staff-status-summary.css";
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const staff = await requireStaff();
