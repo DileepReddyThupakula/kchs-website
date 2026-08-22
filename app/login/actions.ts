@@ -1,19 +1,27 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 
 export type LoginState = { message?: string };
 
-export async function signInStaff(_previous: LoginState, formData: FormData): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+const credentialsSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string().min(1).max(512),
+});
 
-  if (!email || !password) return { message: "Please enter your email address and password." };
+export async function signInStaff(_previous: LoginState, formData: FormData): Promise<LoginState> {
+  const credentials = credentialsSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+
+  if (!credentials.success) return { message: "Please enter a valid email address and password." };
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword(credentials.data);
 
   if (error || !data.user) return { message: "We could not sign you in with those details." };
 
