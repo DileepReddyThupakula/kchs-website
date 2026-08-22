@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { admissionClasses } from "@/lib/admissions/schema";
 import { requireStaff } from "@/lib/staff/auth";
+import { logStaffPerformance } from "@/lib/staff/performance";
 import { createClient } from "@/lib/supabase/server";
 
 export const admissionStatuses = ["new", "contacted", "follow_up", "admitted", "closed"] as const;
@@ -30,6 +31,7 @@ export type StaffAdmissionDetail = StaffAdmission & {
 export async function listAdmissions(filters: { classSeeking?: string; status?: string }) {
   await requireStaff();
   const supabase = await createClient();
+  const queryStartedAt = performance.now();
   let query = supabase
     .from("admission_enquiries")
     .select("id, student_name, guardian_name, class_seeking, phone_number, email_address, status, created_at")
@@ -39,6 +41,7 @@ export async function listAdmissions(filters: { classSeeking?: string; status?: 
   if (filters.classSeeking && (admissionClasses as readonly string[]).includes(filters.classSeeking)) query = query.eq("class_seeking", filters.classSeeking);
 
   const { data, error } = await query;
+  logStaffPerformance("staff-admissions-query", queryStartedAt, error ? "failed" : "success");
   if (error) {
     console.error("Staff admissions list failed.", { category: "database-query", code: error.code });
     return [];
