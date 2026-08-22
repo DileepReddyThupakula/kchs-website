@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { admissionStatusSchema } from "@/lib/staff/admissions";
 import { requireStaff } from "@/lib/staff/auth";
-import { eventStatusSchema, eventTypeSchema } from "@/lib/events";
+import { eventTypeSchema } from "@/lib/events";
 import { noticePrioritySchema, noticeStatusSchema } from "@/lib/notices";
 import { createClient } from "@/lib/supabase/server";
 
@@ -23,15 +23,19 @@ const noticeFormSchema = z.object({
   summary: z.string().trim().max(400, "Summary must be 400 characters or fewer."),
   title: z.string().trim().min(1, "Title is required.").max(180, "Title must be 180 characters or fewer."),
 });
+const eventIntentSchema = z.enum(["draft", "published"]);
 const eventFormSchema = z.object({
   description: z.string().trim().max(6000, "Description must be 6,000 characters or fewer."),
-  endAt: z.string().trim().max(32),
-  eventType: eventTypeSchema,
+  end_at: z.string().trim().max(32),
+  event_type: eventTypeSchema,
+  intent: eventIntentSchema,
+  is_public: z.boolean(),
   location: z.string().trim().max(240, "Location must be 240 characters or fewer."),
-  startAt: z.string().trim().min(1, "Start date and time are required.").max(32),
-  status: eventStatusSchema,
+  start_at: z.string().trim().min(1, "Start date and time are required.").max(32),
   title: z.string().trim().min(1, "Title is required.").max(180, "Title must be 180 characters or fewer."),
 });
+
+export type EventFormState = { fieldErrors?: Partial<Record<"description" | "end_at" | "event_type" | "location" | "start_at" | "title", string>>; formError?: string };
 
 function parseIndianDateTime(value: string) {
   if (!value) return null;
@@ -69,21 +73,36 @@ function getNoticeInput(formData: FormData) {
   };
 }
 
-function getEventInput(formData: FormData) {
+function logEventValidationIssues(issues: z.ZodIssue[]) {
+  console.warn("Staff event validation failed.", { category: "validation", issues: issues.map((issue) => ({ issue: issue.message, path: issue.path.join(".") })) });
+}
+
+function eventValidationState(fieldErrors: EventFormState["fieldErrors"], formError = "Please review the highlighted event details."): EventFormState {
+  return { fieldErrors, formError };
+}
+
+function getEventInput(formData: FormData): { input: { description: string | null; end_at: string | null; event_type: z.infer<typeof eventTypeSchema>; is_public: boolean; location: string | null; start_at: string; status: z.infer<typeof eventIntentSchema>; title: string } } | { state: EventFormState } {
   const parsed = eventFormSchema.safeParse({
     description: formData.get("description"),
-    endAt: formData.get("endAt"),
-    eventType: formData.get("eventType"),
+    end_at: formData.get("end_at"),
+    event_type: formData.get("event_type"),
+    intent: formData.get("intent"),
+    is_public: formData.get("is_public") === "on",
     location: formData.get("location"),
-    startAt: formData.get("startAt"),
-    status: formData.get("status"),
+    start_at: formData.get("start_at"),
     title: formData.get("title"),
   });
-  if (!parsed.success) return null;
-  const startAt = parseIndianDateTime(parsed.data.startAt);
-  const endAt = parseIndianDateTime(parsed.data.endAt);
-  if (!startAt || endAt === undefined || (endAt && new Date(endAt) < new Date(startAt))) return null;
-  return { description: parsed.data.description || null, end_at: endAt, event_type: parsed.data.eventType, is_public: formData.get("isPublic") === "on", location: parsed.data.location || null, start_at: startAt, status: parsed.data.status, title: parsed.data.title };
+  if (!parsed.success) {
+    logEventValidationIssues(parsed.error.issues);
+    const fieldErrors = Object.fromEntries(parsed.error.issues.filter((issue) => typeof issue.path[0] === "string" && issue.path[0] !== "intent" && issue.path[0] !== "is_public").map((issue) => [issue.path[0], issue.message])) as EventFormState["fieldErrors"];
+    return { state: eventValidationState(fieldErrors) };
+  }
+  const startAt = parseIndianDateTime(parsed.data.start_at);
+  const endAt = parseIndianDateTime(parsed.data.end_at);
+  if (!startAt) return { state: eventValidationState({ start_at: "Enter a valid start date and time." }) };
+  if (endAt === undefined) return { state: eventValidationState({ end_at: "Enter a valid end date and time." }) };
+  if (endAt && new Date(endAt) < new Date(startAt)) return { state: eventValidationState({ end_at: "The end date and time cannot be earlier than the start." }) };
+  return { input: { description: parsed.data.description || null, end_at: endAt, event_type: parsed.data.event_type, is_public: parsed.data.is_public, location: parsed.data.location || null, start_at: startAt, status: parsed.data.intent, title: parsed.data.title } };
 }
 
 export async function signOutStaff() {
@@ -186,26 +205,31 @@ export async function archiveNotice(formData: FormData) {
   redirect(`/staff/notices/${id.data}/edit?updated=archived`);
 }
 
-export async function createEvent(formData: FormData) {
-  await requireStaff();
-  const input = getEventInput(formData);
-  if (!input) redirect("/staff/events/new?error=invalid");
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("events").insert(input).select("id").single();
-  if (error || !data) { console.error("Staff event creation failed.", { category: "database-query", code: error?.code }); redirect("/staff/events/new?error=save"); }
-  revalidatePath("/"); revalidatePath("/staff"); revalidatePath("/staff/events");
-  redirect(`/staff/events/${data.id}/edit?created=${input.status}`);
+function eventDatabaseErrorState(operation: string, error: { code?: string; details?: string; hint?: string; message?: string }): EventFormState {
+  console.error(operation, { code: error.code, details: error.details, hint: error.hint, message: error.message });
+  return { formError: "We could not save this event. Please try again." };
 }
 
-export async function updateEvent(formData: FormData) {
+export async function createEvent(_previousState: EventFormState, formData: FormData): Promise<EventFormState> {
   await requireStaff();
-  const id = eventIdSchema.safeParse(formData.get("id")); const input = getEventInput(formData);
-  if (!id.success) redirect("/staff/events?error=update");
-  if (!input) redirect(`/staff/events/${id.data}/edit?error=invalid`);
-  const { error } = await (await createClient()).from("events").update(input).eq("id", id.data);
-  if (error) { console.error("Staff event update failed.", { category: "database-query", code: error.code }); redirect(`/staff/events/${id.data}/edit?error=save`); }
+  const parsed = getEventInput(formData);
+  if ("state" in parsed) return parsed.state;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("events").insert(parsed.input).select("id").single();
+  if (error || !data) return eventDatabaseErrorState("Staff event creation failed.", error ?? {});
   revalidatePath("/"); revalidatePath("/staff"); revalidatePath("/staff/events");
-  redirect(`/staff/events/${id.data}/edit?updated=${input.status}`);
+  redirect(`/staff/events/${data.id}/edit?created=${parsed.input.status}`);
+}
+
+export async function updateEvent(_previousState: EventFormState, formData: FormData): Promise<EventFormState> {
+  await requireStaff();
+  const id = eventIdSchema.safeParse(formData.get("id")); const parsed = getEventInput(formData);
+  if (!id.success) redirect("/staff/events?error=update");
+  if ("state" in parsed) return parsed.state;
+  const { error } = await (await createClient()).from("events").update(parsed.input).eq("id", id.data);
+  if (error) return eventDatabaseErrorState("Staff event update failed.", error);
+  revalidatePath("/"); revalidatePath("/staff"); revalidatePath("/staff/events");
+  redirect(`/staff/events/${id.data}/edit?updated=${parsed.input.status}`);
 }
 
 export async function archiveEvent(formData: FormData) {
