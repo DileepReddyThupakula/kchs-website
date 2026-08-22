@@ -1,0 +1,33 @@
+.student-form input:focus,
+.student-form select:focus {
+  border-color: #ad7d27;
+  box-shadow: 0 0 0 3px rgba(213, 173, 86, 0.2);
+  outline: 0;
+}
+
+.student-form .student-field-error input,
+.student-form .student-field-error select {
+  background: #fff9f6;
+  border-color: #ae573d;
+}
+
+.student-field-message,
+.student-field-helper {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-transform: none;
+}
+
+.student-field-message { color: #9a452d; }
+.student-field-helper { color: #7b6a45; }
+
+.student-required-note {
+  color: #7d6c47;
+  font-size: 11px;
+  font-weight: 700;
+  margin: 0 0 18px;
+}
+
+.student-required-note span { color: #9a452d; }
