@@ -15,6 +15,8 @@ export type NoticePriority = z.infer<typeof noticePrioritySchema>;
 
 export const noticeStatusLabels: Record<NoticeStatus, string> = { archived: "Archived", draft: "Draft", published: "Published" };
 export const noticePriorityLabels: Record<NoticePriority, string> = { important: "Important", normal: "Normal", urgent: "Urgent" };
+export type NoticePresentationStatus = "archived" | "draft" | "expired" | "published" | "scheduled";
+export const noticePresentationLabels: Record<NoticePresentationStatus, string> = { archived: "Archived", draft: "Draft", expired: "Expired", published: "Published", scheduled: "Scheduled" };
 
 export type Notice = {
   content: string;
@@ -52,6 +54,17 @@ function parseNoticeDate(value: string | null) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function getNoticePresentationStatus(notice: Pick<Notice, "expires_at" | "published_at" | "status">): NoticePresentationStatus {
+  if (notice.status === "archived") return "archived";
+  if (notice.status === "draft") return "draft";
+  const now = Date.now();
+  const publishAt = parseNoticeDate(notice.published_at)?.getTime();
+  const expiresAt = parseNoticeDate(notice.expires_at)?.getTime();
+  if (expiresAt && expiresAt <= now) return "expired";
+  if (publishAt && publishAt > now) return "scheduled";
+  return "published";
 }
 
 function logNoticeDatabaseError(operation: string, error: { code?: string; details?: string; hint?: string; message?: string }) {
