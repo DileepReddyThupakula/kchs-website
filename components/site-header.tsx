@@ -10,6 +10,7 @@ const links = [
   ["Academics", "#academics"],
   ["Principal's Desk", "#message"],
   ["Admissions", "/admissions"],
+  ["Faculty", "/faculty"],
   ["Notices", "#notices"],
   ["Gallery", "/gallery"],
   ["Downloads", "/downloads"],
