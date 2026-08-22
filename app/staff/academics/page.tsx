@@ -1,1 +1,5 @@
-import{AcademicLinks}from"@/components/academic-management";import{academicOverview}from"@/lib/academics";export default async function Academics(){const o=await academicOverview();return <><header className="staff-page-header"><div><p className="eyebrow">School management</p><h1>Academic Structure</h1><p>Configure the school year, grade levels, sections, subjects and teaching responsibilities.</p></div></header><section className="academic-summary"><article><span>Current year</span><strong>{o.current?.label??"Not set"}</strong></article><article><span>Active classes</span><strong>{o.classes}</strong></article><article><span>Active sections</span><strong>{o.sections}</strong></article><article><span>Active subjects</span><strong>{o.subjects}</strong></article></section><AcademicLinks/></>;}
+import { AcademicOverviewPage } from "@/components/academic-management";
+
+export default function Academics() {
+  return <AcademicOverviewPage />;
+}
