@@ -11,6 +11,7 @@ const links = [
   ["Principal's Desk", "#message"],
   ["Admissions", "/admissions"],
   ["Notices", "#notices"],
+  ["Gallery", "/gallery"],
   ["Contact", "/contact"],
 ] as const;
 

@@ -16,6 +16,7 @@ import "./staff-notices.css";
 import "./staff-notice-workflow.css";
 import "./staff-events.css";
 import "./staff-event-validation.css";
+import "./staff-gallery.css";
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const staff = await requireStaff();
