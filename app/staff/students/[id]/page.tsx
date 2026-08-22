@@ -1,0 +1,2 @@
+import { notFound } from "next/navigation";import { StudentProfile } from "@/components/student-management";
+export default async function Page({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{created?:string;updated?:string;enrollment?:string;error?:string}>}){const[{id},q]=await Promise.all([params,searchParams]);if(!/^[0-9a-f-]{36}$/i.test(id))notFound();return <StudentProfile id={id} params={q}/>}
