@@ -21,7 +21,7 @@ export async function updateAdmissionStatus(formData: FormData) {
   await requireStaff();
   const id = idSchema.safeParse(formData.get("id"));
   const status = admissionStatusSchema.safeParse(formData.get("status"));
-  if (!id.success || !status.success) redirect("/staff?error=update");
+  if (!id.success || !status.success) redirect("/staff/admissions?error=update");
 
   const supabase = await createClient();
   const { error } = await supabase.from("admission_enquiries").update({ status: status.data }).eq("id", id.data);
@@ -31,6 +31,7 @@ export async function updateAdmissionStatus(formData: FormData) {
   }
 
   revalidatePath("/staff");
+  revalidatePath("/staff/admissions");
   revalidatePath(`/staff/admissions/${id.data}`);
   redirect(`/staff/admissions/${id.data}?updated=status`);
 }
@@ -39,7 +40,7 @@ export async function updateAdmissionNotes(formData: FormData) {
   await requireStaff();
   const id = idSchema.safeParse(formData.get("id"));
   const notes = notesSchema.safeParse(formData.get("staffNotes"));
-  if (!id.success || !notes.success) redirect("/staff?error=update");
+  if (!id.success || !notes.success) redirect("/staff/admissions?error=update");
 
   const supabase = await createClient();
   const { error } = await supabase.from("admission_enquiries").update({ staff_notes: notes.data }).eq("id", id.data);
@@ -49,6 +50,7 @@ export async function updateAdmissionNotes(formData: FormData) {
   }
 
   revalidatePath("/staff");
+  revalidatePath("/staff/admissions");
   revalidatePath(`/staff/admissions/${id.data}`);
   redirect(`/staff/admissions/${id.data}?updated=notes`);
 }

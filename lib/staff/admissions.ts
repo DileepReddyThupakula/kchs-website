@@ -37,6 +37,12 @@ export type AdmissionsDashboard = {
   summary: Record<AdmissionStatus, number> & { total: number };
 };
 
+export type StaffDashboardOverview = {
+  attention: StaffAdmission[];
+  metrics: Pick<AdmissionsDashboard["summary"], "total" | "new" | "follow_up" | "admitted">;
+  recent: StaffAdmission[];
+};
+
 function isValidClass(value: string | undefined) {
   return Boolean(value && (admissionClasses as readonly string[]).includes(value));
 }
@@ -90,6 +96,38 @@ export async function getAdmissionsDashboard(filters: AdmissionsFilters): Promis
   }, { total: 0, new: 0, contacted: 0, follow_up: 0, admitted: 0, closed: 0 });
 
   return { admissions, filtersActive: Boolean(validStatus || validClass || search), summary };
+}
+
+export async function getStaffDashboardOverview(): Promise<StaffDashboardOverview> {
+  await requireStaff();
+  const supabase = await createClient();
+  const queryStartedAt = performance.now();
+  const selectFields = "id, student_name, guardian_name, class_seeking, phone_number, email_address, status, created_at";
+
+  const [totalResult, newResult, followUpResult, admittedResult, attentionResult, recentResult] = await Promise.all([
+    supabase.from("admission_enquiries").select("id", { count: "exact", head: true }),
+    supabase.from("admission_enquiries").select("id", { count: "exact", head: true }).eq("status", "new"),
+    supabase.from("admission_enquiries").select("id", { count: "exact", head: true }).eq("status", "follow_up"),
+    supabase.from("admission_enquiries").select("id", { count: "exact", head: true }).eq("status", "admitted"),
+    supabase.from("admission_enquiries").select(selectFields).in("status", ["new", "follow_up"]).order("created_at", { ascending: false }).limit(5),
+    supabase.from("admission_enquiries").select(selectFields).order("created_at", { ascending: false }).limit(5),
+  ]);
+
+  const results = [totalResult, newResult, followUpResult, admittedResult, attentionResult, recentResult];
+  const error = results.find((result) => result.error)?.error;
+  logStaffPerformance("staff-dashboard-overview-query", queryStartedAt, error ? "failed" : "success");
+  if (error) console.error("Staff dashboard overview failed.", { category: "database-query", code: error.code });
+
+  return {
+    attention: (attentionResult.data ?? []) as StaffAdmission[],
+    metrics: {
+      admitted: admittedResult.count ?? 0,
+      follow_up: followUpResult.count ?? 0,
+      new: newResult.count ?? 0,
+      total: totalResult.count ?? 0,
+    },
+    recent: (recentResult.data ?? []) as StaffAdmission[],
+  };
 }
 
 export async function getAdmission(id: string) {
