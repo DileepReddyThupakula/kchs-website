@@ -42,3 +42,9 @@ The form shares a Zod validation schema in `lib/admissions/schema.ts`, including
 ### Local development and security
 
 Use a non-production local database environment when available. Vercel Sensitive production variables may not be retrievable as usable plaintext locally; the production deployment receives the server-only integration variables at runtime. Never expose `POSTGRES_URL`, Supabase secret/service keys, or database credentials to client-side code, and never commit `.env.local`, `.env.production.local`, or `.vercel`.
+
+## Staff portal
+
+`/login` uses Supabase Auth email/password sessions and `/staff` is protected server-side. Authentication alone is not sufficient: a user must also have an active `public.staff_users` row with the `admin` or `staff` role. Row Level Security permits only active staff to read or update admission enquiries, while public admissions writes continue through the existing trusted server-side Postgres path.
+
+To provision the first staff user, create the user in the Supabase Dashboard's **Authentication → Users** area, then insert that user's UUID in `public.staff_users` with an `admin` or `staff` role and `active = true` using the Dashboard SQL editor. Do not create public signup or store passwords in this repository.

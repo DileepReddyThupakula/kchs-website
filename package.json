@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@next/third-parties": "latest",
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.3",
     "next": "latest",
     "postgres": "^3.4.9",
     "react": "latest",
