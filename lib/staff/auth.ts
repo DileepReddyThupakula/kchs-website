@@ -52,3 +52,9 @@ export async function requireStaff() {
   if (!staff) redirect("/login?error=unauthorized");
   return staff;
 }
+
+export async function requireAdmin() {
+  const staff = await requireStaff();
+  if (staff.role !== "admin") redirect("/staff?error=forbidden");
+  return staff;
+}

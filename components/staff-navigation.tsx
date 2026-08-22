@@ -3,32 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-function navigationClass(isActive: boolean) {
-  return isActive ? "staff-nav-current" : undefined;
-}
+function navigationClass(isActive: boolean) { return isActive ? "staff-nav-current" : undefined; }
 
-export function StaffNavigation() {
-  const pathname = usePathname();
-  const dashboardActive = pathname === "/staff";
-  const admissionsActive = pathname.startsWith("/staff/admissions");
-  const noticesActive = pathname.startsWith("/staff/notices");
-  const eventsActive = pathname.startsWith("/staff/events");
-  const galleryActive = pathname.startsWith("/staff/gallery");
-  const documentsActive = pathname.startsWith("/staff/documents");
-  const facultyActive = pathname.startsWith("/staff/faculty");
-
-  return <nav className="staff-nav" aria-label="Staff portal navigation">
-    <p className="staff-nav-label">Main</p>
-    <Link href="/staff" className={navigationClass(dashboardActive)} aria-current={dashboardActive ? "page" : undefined}><span aria-hidden="true">◆</span> Dashboard</Link>
-    <p className="staff-nav-label staff-nav-spacer">Admissions</p>
-    <Link href="/staff/admissions" className={navigationClass(admissionsActive)} aria-current={admissionsActive ? "page" : undefined}><span aria-hidden="true">◇</span> Enquiries</Link>
-    <p className="staff-nav-label staff-nav-spacer">Communication</p>
-    <Link href="/staff/notices" className={navigationClass(noticesActive)} aria-current={noticesActive ? "page" : undefined}><span aria-hidden="true">✦</span> Notices</Link>
-    <Link href="/staff/events" className={navigationClass(eventsActive)} aria-current={eventsActive ? "page" : undefined}><span aria-hidden="true">◌</span> Events</Link>
-    <Link href="/staff/gallery" className={navigationClass(galleryActive)} aria-current={galleryActive ? "page" : undefined}><span aria-hidden="true">▣</span> Gallery</Link>
-    <Link href="/staff/documents" className={navigationClass(documentsActive)} aria-current={documentsActive ? "page" : undefined}><span aria-hidden="true">▤</span> Documents</Link>
-    <Link href="/staff/faculty" className={navigationClass(facultyActive)} aria-current={facultyActive ? "page" : undefined}><span aria-hidden="true">◇</span> Faculty</Link>
-    <p className="staff-nav-label staff-nav-spacer">Public website</p>
-    <Link href="/"><span aria-hidden="true">↗</span> View website</Link>
-  </nav>;
+export function StaffNavigation({ role }: { role: "admin" | "staff" }) {
+  const pathname = usePathname(); const is = (path: string) => pathname.startsWith(path);
+  return <nav className="staff-nav" aria-label="Staff portal navigation"><p className="staff-nav-label">Main</p><Link href="/staff" className={navigationClass(pathname === "/staff")} aria-current={pathname === "/staff" ? "page" : undefined}><span aria-hidden="true">◆</span> Dashboard</Link><p className="staff-nav-label staff-nav-spacer">Admissions</p><Link href="/staff/admissions" className={navigationClass(is("/staff/admissions"))} aria-current={is("/staff/admissions") ? "page" : undefined}><span aria-hidden="true">◇</span> Enquiries</Link>{role === "admin" && <><p className="staff-nav-label staff-nav-spacer">School management</p><Link href="/staff/staff" className={navigationClass(is("/staff/staff"))} aria-current={is("/staff/staff") ? "page" : undefined}><span aria-hidden="true">◈</span> Staff</Link></>}<p className="staff-nav-label staff-nav-spacer">Communication</p><Link href="/staff/notices" className={navigationClass(is("/staff/notices"))} aria-current={is("/staff/notices") ? "page" : undefined}><span aria-hidden="true">✦</span> Notices</Link><Link href="/staff/events" className={navigationClass(is("/staff/events"))} aria-current={is("/staff/events") ? "page" : undefined}><span aria-hidden="true">◌</span> Events</Link><Link href="/staff/gallery" className={navigationClass(is("/staff/gallery"))} aria-current={is("/staff/gallery") ? "page" : undefined}><span aria-hidden="true">▣</span> Gallery</Link><Link href="/staff/documents" className={navigationClass(is("/staff/documents"))} aria-current={is("/staff/documents") ? "page" : undefined}><span aria-hidden="true">▤</span> Documents</Link><p className="staff-nav-label staff-nav-spacer">School community</p><Link href="/staff/faculty" className={navigationClass(is("/staff/faculty"))} aria-current={is("/staff/faculty") ? "page" : undefined}><span aria-hidden="true">◇</span> Faculty</Link><p className="staff-nav-label staff-nav-spacer">Public website</p><Link href="/"><span aria-hidden="true">↗</span> View website</Link></nav>;
 }
