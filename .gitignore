@@ -8,3 +8,5 @@ out/
 *.tsbuildinfo
 coverage/
 .vercel
+.mcp.json
+supabase/.temp/
