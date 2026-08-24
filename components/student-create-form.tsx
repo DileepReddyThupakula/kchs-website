@@ -1,42 +1,92 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { createContext, useActionState, useContext, useEffect, useRef, useState } from "react";
 
 import { createStudent, type StudentCreateState } from "@/app/staff/students/actions";
 import { AcademicSubmitButton } from "@/components/academic-submit-button";
 import { StudentEnrollmentFields, type StudentEnrollmentData } from "@/components/student-enrollment-form";
-import { enrollmentSchema, studentSchema, validationErrors, type StudentFieldErrors } from "@/lib/student-validation";
+import { enrollmentSchema, normalizeStudentFormData, studentSchema, validationErrors, type StudentFieldErrors } from "@/lib/student-validation";
 
 type Props = StudentEnrollmentData;
 const initialStudentCreateState: StudentCreateState = { status: "idle", fieldErrors: {} };
 
 const fieldIds: Record<string, string> = {
+  photo: "student-photo",
+  preferred_name: "student-preferred-name",
+  blood_group: "student-blood-group",
   full_name: "student-full-name",
   admission_number: "student-admission-number",
   date_of_birth: "student-date-of-birth",
+  gender: "student-gender",
   admission_date: "student-admission-date",
+  status: "student-status",
+  student_category: "student-category",
+  nationality: "student-nationality",
+  mother_tongue: "student-mother-tongue",
+  aadhaar_number: "student-aadhaar",
+  previous_school_name: "student-previous-school",
+  previous_class: "student-previous-class",
+  previous_school_tc_number: "student-previous-tc",
+  previous_school_location: "student-previous-location",
+  admission_remarks: "student-admission-remarks",
+  father_guardian_name: "student-father",
+  mother_name: "student-mother",
   primary_phone: "student-primary-phone",
   secondary_phone: "student-secondary-phone",
   email: "student-email",
+  father_name: "student-father-name",
+  father_mobile: "student-father-mobile",
+  father_email: "student-father-email",
+  father_occupation: "student-father-occupation",
+  mother_mobile: "student-mother-mobile",
+  mother_email: "student-mother-email",
+  mother_occupation: "student-mother-occupation",
+  guardian_name: "student-guardian-name",
+  guardian_relationship: "student-guardian-relationship",
+  guardian_mobile: "student-guardian-mobile",
+  guardian_email: "student-guardian-email",
+  primary_contact: "student-primary-contact",
+  emergency_contact_name: "student-emergency-name",
+  emergency_contact_relationship: "student-emergency-relationship",
+  emergency_contact_mobile: "student-emergency-mobile",
+  address_line_2: "student-address-2",
+  state: "student-state",
+  postal_code: "student-postal-code",
+  door_number: "student-door",
+  street: "student-street",
+  area_locality: "student-area",
+  village_town_city: "student-village",
+  mandal: "student-mandal",
+  district: "student-district",
+  identification_mark_1: "student-mark-1",
+  identification_mark_2: "student-mark-2",
+  transport_required: "student-transport",
+  general_notes: "student-general-notes",
   academic_year_id: "student-academic-year-id",
   class_id: "student-class-id",
   academic_section_id: "student-academic-section-id",
   roll_number: "student-roll-number",
   enrollment_date: "student-enrollment-date",
+  enrollment_status: "student-enrollment-status",
 };
+const fieldNamesById = Object.fromEntries(Object.entries(fieldIds).map(([name, id]) => [id, name]));
+const ValidationContext = createContext<{ errors: StudentFieldErrors }>({ errors: {} });
 
 function messageFor(errors: StudentFieldErrors, field: string) {
   return errors[field]?.[0];
 }
 
 function Field({ children, error, htmlFor, label, required }: { children: React.ReactNode; error?: string; htmlFor: string; label: string; required?: boolean }) {
+  const validation = useContext(ValidationContext);
+  const message = error ?? validation.errors[fieldNamesById[htmlFor]]?.[0];
   const errorId = `${htmlFor}-error`;
-  return <label className={error ? "student-field-error" : undefined} htmlFor={htmlFor}>{label}{required ? " *" : ""}{children}{error && <span className="student-field-message" id={errorId}>{error}</span>}</label>;
+  return <label className={message ? "student-field-error" : undefined} htmlFor={htmlFor}>{label}{required ? " *" : ""}{children}{message && <span className="student-field-message" id={errorId}>{message}</span>}</label>;
 }
 
 export function StudentCreateForm({ years, classes, sections }: Props) {
   const [state, formAction] = useActionState(createStudent, initialStudentCreateState);
+  const formRef = useRef<HTMLFormElement>(null);
   const [clientErrors, setClientErrors] = useState<StudentFieldErrors>({});
   const [editedFields, setEditedFields] = useState<string[]>([]);
   const serverErrors = state.status === "error" ? Object.fromEntries(Object.entries(state.fieldErrors).filter(([field]) => !editedFields.includes(field))) : {};
@@ -56,6 +106,15 @@ export function StudentCreateForm({ years, classes, sections }: Props) {
     }
   }, [state]);
 
+  useEffect(() => {
+    if (state.status !== "error" || !state.values || !formRef.current) return;
+    for (const [name, value] of Object.entries(state.values)) {
+      const control = formRef.current.elements.namedItem(name);
+      if (control instanceof HTMLInputElement && control.type === "checkbox") control.checked = value === true;
+      else if ((control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) && control.type !== "file") control.value = typeof value === "string" ? value : "";
+    }
+  }, [state]);
+
   const clearField = (field: string) => {
     setClientErrors((current) => {
       if (!current[field]) return current;
@@ -67,7 +126,7 @@ export function StudentCreateForm({ years, classes, sections }: Props) {
   };
 
   const validateBeforeSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    const values = Object.fromEntries(new FormData(event.currentTarget));
+    const values = normalizeStudentFormData(new FormData(event.currentTarget));
     const nextErrors = validationErrors(studentSchema.safeParse(values), enrollmentSchema.safeParse(values));
     if (!Object.keys(nextErrors).length) return;
     event.preventDefault();
@@ -78,8 +137,10 @@ export function StudentCreateForm({ years, classes, sections }: Props) {
 
   const error = (field: string) => messageFor(errors, field);
   const describedBy = (field: string) => error(field) ? `${fieldIds[field]}-error` : undefined;
+  const submitted = state.status === "error" ? state.values : undefined;
+  const enrollmentInitial = submitted ? { yearId: String(submitted.academic_year_id ?? ""), classId: String(submitted.class_id ?? ""), sectionId: String(submitted.academic_section_id ?? ""), roll: String(submitted.roll_number ?? ""), date: String(submitted.enrollment_date ?? ""), status: String(submitted.enrollment_status ?? "active") } : undefined;
 
-  return <form className="student-form" action={formAction} noValidate onSubmit={validateBeforeSubmit}>
+  return <ValidationContext.Provider value={{ errors }}><form ref={formRef} className="student-form" action={formAction} noValidate onChange={(event) => { const target = event.target as unknown as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement; if (target.name) clearField(target.name); }} onSubmit={validateBeforeSubmit}>
     <p className="student-required-note"><span aria-hidden="true">*</span> Required fields</p>
     {state.status === "error" && <p className="academic-feedback academic-feedback-error" role="alert">{state.message}</p>}
     <section className="student-form-section"><header><p className="academic-kicker">Student photo / identity</p><h2>Student information</h2><p>Upload an optional JPEG, PNG or WebP profile photo up to 4 MB.</p></header><div className="student-form-grid"><Field htmlFor="student-photo" label="Upload photo"><input id="student-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" /></Field><Field htmlFor="student-preferred-name" label="Preferred name"><input id="student-preferred-name" name="preferred_name" /></Field><Field htmlFor="student-blood-group" label="Blood group"><select id="student-blood-group" name="blood_group"><option value="">Not specified</option><option value="a_positive">A+</option><option value="a_negative">A-</option><option value="b_positive">B+</option><option value="b_negative">B-</option><option value="ab_positive">AB+</option><option value="ab_negative">AB-</option><option value="o_positive">O+</option><option value="o_negative">O-</option><option value="unknown">Unknown</option></select></Field></div></section><section className="student-form-section"><header><p className="academic-kicker">Personal information</p><h2>Student profile</h2></header><div className="student-form-grid">
@@ -100,8 +161,8 @@ export function StudentCreateForm({ years, classes, sections }: Props) {
       <Field htmlFor="student-address-2" label="Address line 2"><input id="student-address-2" name="address_line_2" /></Field><Field htmlFor="student-state" label="State"><input id="student-state" name="state" defaultValue="Andhra Pradesh" /></Field><Field htmlFor="student-postal-code" label="Postal code" error={error("postal_code")}><input id="student-postal-code" name="postal_code" inputMode="numeric" aria-invalid={Boolean(error("postal_code"))} aria-describedby={describedBy("postal_code")} onChange={() => clearField("postal_code")} /></Field>
       <Field htmlFor="student-door" label="Door / house no."><input id="student-door" name="door_number" /></Field><Field htmlFor="student-street" label="Street"><input id="student-street" name="street" /></Field><Field htmlFor="student-area" label="Area / locality"><input id="student-area" name="area_locality" /></Field><Field htmlFor="student-village" label="Village / town / city"><input id="student-village" name="village_town_city" /></Field><Field htmlFor="student-mandal" label="Mandal"><input id="student-mandal" name="mandal" /></Field><Field htmlFor="student-district" label="District"><input id="student-district" name="district" /></Field>
     </div></section>
-    <section className="student-form-section"><header><p className="academic-kicker">Additional information</p><h2>School details</h2></header><div className="student-form-grid"><Field htmlFor="student-mark-1" label="Identification mark 1"><input id="student-mark-1" name="identification_mark_1" /></Field><Field htmlFor="student-mark-2" label="Identification mark 2"><input id="student-mark-2" name="identification_mark_2" /></Field><label htmlFor="student-transport">Transport required<input id="student-transport" name="transport_required" type="checkbox" /></label><Field htmlFor="student-general-notes" label="General notes"><textarea id="student-general-notes" name="general_notes" rows={4} /></Field></div></section>
-    <StudentEnrollmentFields years={years} classes={classes} sections={sections} showActions={false} errors={errors} onFieldChange={clearField} />
+    <section className="student-form-section"><header><p className="academic-kicker">Additional information</p><h2>School details</h2></header><div className="student-form-grid"><Field htmlFor="student-mark-1" label="Identification mark 1"><input id="student-mark-1" name="identification_mark_1" /></Field><Field htmlFor="student-mark-2" label="Identification mark 2"><input id="student-mark-2" name="identification_mark_2" /></Field><Field htmlFor="student-transport" label="Transport required"><input id="student-transport" name="transport_required" type="checkbox" /></Field><Field htmlFor="student-general-notes" label="General notes"><textarea id="student-general-notes" name="general_notes" rows={4} /></Field></div></section>
+    <StudentEnrollmentFields key={JSON.stringify(enrollmentInitial)} years={years} classes={classes} sections={sections} initial={enrollmentInitial} allowStatusChange={false} showActions={false} errors={errors} onFieldChange={clearField} />
     <div className="student-form-actions"><AcademicSubmitButton className="staff-action-submit">Create Student</AcademicSubmitButton><Link href="/staff/students">Cancel</Link></div>
-  </form>;
+  </form></ValidationContext.Provider>;
 }

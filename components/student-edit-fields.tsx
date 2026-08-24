@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import type { Student } from "@/lib/students";
-import type { StudentFieldErrors } from "@/lib/student-validation";
+import type { StudentFieldErrors, StudentFormStateValues } from "@/lib/student-validation";
 
 const text = (student: Student, name: keyof Student) => String(student[name] ?? "");
 type PersonalFieldProps = {
@@ -12,11 +12,11 @@ type PersonalFieldProps = {
   required?: boolean;
   inputMode?: "numeric";
   maxLength?: number;
-  submittedValues?: Record<string, FormDataEntryValue | undefined>;
+  submittedValues?: StudentFormStateValues;
   fieldErrors?: StudentFieldErrors;
 };
 
-const submittedValue = (student: Student, name: keyof Student, submittedValues?: Record<string, FormDataEntryValue | undefined>) => {
+const submittedValue = (student: Student, name: keyof Student, submittedValues?: StudentFormStateValues) => {
   const value = submittedValues?.[name];
   return typeof value === "string" ? value : text(student, name);
 };
@@ -24,7 +24,7 @@ const submittedValue = (student: Student, name: keyof Student, submittedValues?:
 type StudentPhotoProps = {
   student: Student;
   photoUrl?: string | null;
-  submittedValues?: Record<string, FormDataEntryValue | undefined>;
+  submittedValues?: StudentFormStateValues;
   fieldErrors?: StudentFieldErrors;
 };
 
@@ -92,11 +92,11 @@ function TransportRequired({ student, submittedValues, fieldErrors }: Pick<Perso
   const error = fieldErrors?.[name]?.[0];
   const id = `student-${name}`;
   const submitted = submittedValues?.[name];
-  const checked = typeof submitted === "string" ? submitted === "on" : Boolean(student.transport_required);
+  const checked = typeof submitted === "boolean" ? submitted : Boolean(student.transport_required);
   return <label className={error ? "student-field-error" : undefined} htmlFor={id}>Transport required<input aria-describedby={error ? `${id}-error` : undefined} aria-invalid={Boolean(error)} defaultChecked={checked} id={id} name={name} type="checkbox"/>{error ? <span className="student-field-message" id={`${id}-error`}>{error}</span> : null}</label>;
 }
 
-export function StudentEditFields({ student, photoUrl, submittedValues, fieldErrors }: { student: Student; photoUrl?: string | null; submittedValues?: Record<string, FormDataEntryValue | undefined>; fieldErrors?: StudentFieldErrors }) {
+export function StudentEditFields({ student, photoUrl, submittedValues, fieldErrors }: { student: Student; photoUrl?: string | null; submittedValues?: StudentFormStateValues; fieldErrors?: StudentFieldErrors }) {
   const s = student;
   return <>
     <section className="student-form-section"><header><p className="academic-kicker">Personal information</p><h2>Student information</h2></header><div className="student-form-grid"><PersonalInput student={s} name="full_name" label="Student name" required submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="admission_number" label="Admission number" required submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="preferred_name" label="Preferred name" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="date_of_birth" label="Date of birth" type="date" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalSelect student={s} name="gender" label="Gender" submittedValues={submittedValues} fieldErrors={fieldErrors}><option value="">Not specified</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="not_specified">Prefer not to say</option></PersonalSelect><PersonalSelect student={s} name="blood_group" label="Blood group" submittedValues={submittedValues} fieldErrors={fieldErrors}><option value="">Not specified</option><option value="a_positive">A+</option><option value="a_negative">A−</option><option value="b_positive">B+</option><option value="b_negative">B−</option><option value="ab_positive">AB+</option><option value="ab_negative">AB−</option><option value="o_positive">O+</option><option value="o_negative">O−</option><option value="unknown">Unknown</option></PersonalSelect><PersonalInput student={s} name="student_category" label="Student category" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="aadhaar_number" label="Aadhaar number" inputMode="numeric" maxLength={12} submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="nationality" label="Nationality" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="mother_tongue" label="Mother tongue" submittedValues={submittedValues} fieldErrors={fieldErrors}/><StudentPhoto student={s} photoUrl={photoUrl} submittedValues={submittedValues} fieldErrors={fieldErrors}/></div></section>
