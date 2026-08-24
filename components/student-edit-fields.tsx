@@ -61,7 +61,7 @@ function StudentPhoto({ student, photoUrl, submittedValues, fieldErrors }: Stude
         type="file"
       />
       {photoError && <span className="student-field-message" id={`${id}-error`}>{photoError}</span>}
-      {hasPhoto && !removePhoto && (
+      {hasPhoto && (
         <div className="student-current-photo">
           {photoUrl && (
             <Image
