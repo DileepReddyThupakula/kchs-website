@@ -10,7 +10,7 @@ import type { Student } from "@/lib/students";
 
 const initialStudentEditState: StudentEditState = { status: "idle", fieldErrors: {} };
 
-export function StudentEditForm({ student }: { student: Student }) {
+export function StudentEditForm({ student, photoUrl }: { student: Student; photoUrl?: string | null }) {
   const [state, formAction] = useActionState(updateStudentState, initialStudentEditState);
   const failing = state.status === "error";
   const submittedValues = failing ? state.values : undefined;
@@ -19,7 +19,7 @@ export function StudentEditForm({ student }: { student: Student }) {
   return <form className="student-form" action={formAction} noValidate>
     <input type="hidden" name="id" value={student.id}/>
     {failing && state.message && <p className="academic-feedback academic-feedback-error" role="alert">{state.message}</p>}
-    <StudentEditFields student={student} submittedValues={submittedValues} fieldErrors={fieldErrors}/>
+    <StudentEditFields student={student} photoUrl={photoUrl} submittedValues={submittedValues} fieldErrors={fieldErrors}/>
     <div className="student-form-actions"><AcademicSubmitButton className="staff-action-submit">Save Changes</AcademicSubmitButton><Link href={`/staff/students/${student.id}`}>Cancel</Link></div>
   </form>;
 }

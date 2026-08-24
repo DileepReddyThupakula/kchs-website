@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import type { Student } from "@/lib/students";
 import type { StudentFieldErrors } from "@/lib/student-validation";
@@ -20,6 +21,13 @@ const submittedValue = (student: Student, name: keyof Student, submittedValues?:
   return typeof value === "string" ? value : text(student, name);
 };
 
+type StudentPhotoProps = {
+  student: Student;
+  photoUrl?: string | null;
+  submittedValues?: Record<string, FormDataEntryValue | undefined>;
+  fieldErrors?: StudentFieldErrors;
+};
+
 function PersonalInput({ student, name, label, type = "text", required, inputMode, maxLength, submittedValues, fieldErrors }: PersonalFieldProps) {
   const error = fieldErrors?.[name]?.[0];
   const id = `student-${name}`;
@@ -32,6 +40,53 @@ function PersonalSelect({ student, name, label, children, required, submittedVal
   return <label className={error ? "student-field-error" : undefined} htmlFor={id}>{label}{required ? " *" : ""}<select aria-describedby={error ? `${id}-error` : undefined} aria-invalid={Boolean(error)} defaultValue={submittedValue(student, name, submittedValues)} id={id} name={name} required={required}>{children}</select>{error ? <span className="student-field-message" id={`${id}-error`}>{error}</span> : null}</label>;
 }
 
+function StudentPhoto({ student, photoUrl, submittedValues, fieldErrors }: StudentPhotoProps) {
+  const photoError = fieldErrors?.photo?.[0];
+  const id = "student-photo";
+  const removeId = "student-remove-photo";
+  const hasPhoto = Boolean(photoUrl ?? student.profile_photo_path);
+  const removePhoto = submittedValues?.remove_photo === "on";
+
+  return (
+    <div className={photoError ? "student-field-error" : undefined}>
+      <label htmlFor={id}>
+        Profile photo <span>JPEG, PNG or WebP · Maximum 4 MB</span>
+      </label>
+      <input
+        accept="image/jpeg,image/png,image/webp"
+        aria-describedby={photoError ? `${id}-error` : undefined}
+        aria-invalid={Boolean(photoError)}
+        id={id}
+        name="photo"
+        type="file"
+      />
+      {photoError && <span className="student-field-message" id={`${id}-error`}>{photoError}</span>}
+      {hasPhoto && !removePhoto && (
+        <div className="student-current-photo">
+          {photoUrl && (
+            <Image
+              src={photoUrl}
+              alt={`Current photo of ${student.full_name}`}
+              width={112}
+              height={112}
+              unoptimized
+            />
+          )}
+          <label htmlFor={removeId}>
+            <input
+              id={removeId}
+              name="remove_photo"
+              type="checkbox"
+              defaultChecked={removePhoto}
+            />
+            <span>Remove current photo</span>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TransportRequired({ student, submittedValues, fieldErrors }: Pick<PersonalFieldProps, "student" | "submittedValues" | "fieldErrors">) {
   const name = "transport_required";
   const error = fieldErrors?.[name]?.[0];
@@ -41,10 +96,10 @@ function TransportRequired({ student, submittedValues, fieldErrors }: Pick<Perso
   return <label className={error ? "student-field-error" : undefined} htmlFor={id}>Transport required<input aria-describedby={error ? `${id}-error` : undefined} aria-invalid={Boolean(error)} defaultChecked={checked} id={id} name={name} type="checkbox"/>{error ? <span className="student-field-message" id={`${id}-error`}>{error}</span> : null}</label>;
 }
 
-export function StudentEditFields({ student, submittedValues, fieldErrors }: { student: Student; submittedValues?: Record<string, FormDataEntryValue | undefined>; fieldErrors?: StudentFieldErrors }) {
+export function StudentEditFields({ student, photoUrl, submittedValues, fieldErrors }: { student: Student; photoUrl?: string | null; submittedValues?: Record<string, FormDataEntryValue | undefined>; fieldErrors?: StudentFieldErrors }) {
   const s = student;
   return <>
-    <section className="student-form-section"><header><p className="academic-kicker">Personal information</p><h2>Student information</h2></header><div className="student-form-grid"><PersonalInput student={s} name="full_name" label="Student name" required submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="admission_number" label="Admission number" required submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="preferred_name" label="Preferred name" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="date_of_birth" label="Date of birth" type="date" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalSelect student={s} name="gender" label="Gender" submittedValues={submittedValues} fieldErrors={fieldErrors}><option value="">Not specified</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="not_specified">Prefer not to say</option></PersonalSelect><PersonalSelect student={s} name="blood_group" label="Blood group" submittedValues={submittedValues} fieldErrors={fieldErrors}><option value="">Not specified</option><option value="a_positive">A+</option><option value="a_negative">A−</option><option value="b_positive">B+</option><option value="b_negative">B−</option><option value="ab_positive">AB+</option><option value="ab_negative">AB−</option><option value="o_positive">O+</option><option value="o_negative">O−</option><option value="unknown">Unknown</option></PersonalSelect><PersonalInput student={s} name="student_category" label="Student category" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="aadhaar_number" label="Aadhaar number" inputMode="numeric" maxLength={12} submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="nationality" label="Nationality" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="mother_tongue" label="Mother tongue" submittedValues={submittedValues} fieldErrors={fieldErrors}/></div></section>
+    <section className="student-form-section"><header><p className="academic-kicker">Personal information</p><h2>Student information</h2></header><div className="student-form-grid"><PersonalInput student={s} name="full_name" label="Student name" required submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="admission_number" label="Admission number" required submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="preferred_name" label="Preferred name" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="date_of_birth" label="Date of birth" type="date" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalSelect student={s} name="gender" label="Gender" submittedValues={submittedValues} fieldErrors={fieldErrors}><option value="">Not specified</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option><option value="not_specified">Prefer not to say</option></PersonalSelect><PersonalSelect student={s} name="blood_group" label="Blood group" submittedValues={submittedValues} fieldErrors={fieldErrors}><option value="">Not specified</option><option value="a_positive">A+</option><option value="a_negative">A−</option><option value="b_positive">B+</option><option value="b_negative">B−</option><option value="ab_positive">AB+</option><option value="ab_negative">AB−</option><option value="o_positive">O+</option><option value="o_negative">O−</option><option value="unknown">Unknown</option></PersonalSelect><PersonalInput student={s} name="student_category" label="Student category" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="aadhaar_number" label="Aadhaar number" inputMode="numeric" maxLength={12} submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="nationality" label="Nationality" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="mother_tongue" label="Mother tongue" submittedValues={submittedValues} fieldErrors={fieldErrors}/><StudentPhoto student={s} photoUrl={photoUrl} submittedValues={submittedValues} fieldErrors={fieldErrors}/></div></section>
     <section className="student-form-section"><header><p className="academic-kicker">Admission information</p><h2>Admission</h2></header><div className="student-form-grid"><PersonalInput student={s} name="admission_date" label="Admission date" type="date" required submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalSelect student={s} name="status" label="Status" required submittedValues={submittedValues} fieldErrors={fieldErrors}><option value="active">Active</option><option value="inactive">Inactive</option><option value="graduated">Graduated</option><option value="transferred">Transferred</option></PersonalSelect><PersonalInput student={s} name="previous_school_name" label="Previous school name" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="previous_class" label="Previous class" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="previous_school_tc_number" label="Previous school TC number" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="previous_school_location" label="Previous school location" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="admission_remarks" label="Remarks" submittedValues={submittedValues} fieldErrors={fieldErrors}/></div></section>
     <section className="student-form-section"><header><p className="academic-kicker">Parent / guardian information</p><h2>Contacts</h2></header><div className="student-form-grid"><PersonalInput student={s} name="father_name" label="Father name" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="father_mobile" label="Father mobile" type="tel" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="father_email" label="Father email" type="email" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="father_occupation" label="Father occupation" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="mother_name" label="Mother name" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="mother_mobile" label="Mother mobile" type="tel" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="mother_email" label="Mother email" type="email" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="mother_occupation" label="Mother occupation" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="guardian_name" label="Guardian name" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="guardian_relationship" label="Guardian relationship" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="guardian_mobile" label="Guardian mobile" type="tel" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="guardian_email" label="Guardian email" type="email" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="emergency_contact_name" label="Emergency contact name" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="emergency_contact_relationship" label="Emergency contact relationship" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="emergency_contact_mobile" label="Emergency contact mobile" type="tel" submittedValues={submittedValues} fieldErrors={fieldErrors}/></div></section>
     <section className="student-form-section"><header><p className="academic-kicker">Address</p><h2>Residence</h2></header><div className="student-form-grid"><PersonalInput student={s} name="door_number" label="Door / house no." submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="street" label="Street" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="address_line_2" label="Address line 2" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="area_locality" label="Area / locality" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="village_town_city" label="Village / town / city" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="mandal" label="Mandal" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="district" label="District" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="state" label="State" submittedValues={submittedValues} fieldErrors={fieldErrors}/><PersonalInput student={s} name="postal_code" label="Postal code" submittedValues={submittedValues} fieldErrors={fieldErrors}/></div></section>
