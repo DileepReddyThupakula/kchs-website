@@ -44,7 +44,8 @@ test("edit schema excludes legacy contact fields that are not editable", () => {
   if (!parsed.success) return;
   for (const field of ["father_guardian_name", "primary_phone", "secondary_phone", "email", "primary_contact"]) assert.equal(field in parsed.data, false);
   const patch = studentEditPatch(parsed.data, form);
-  assert.deepEqual(Object.keys(patch).sort(), ["admission_date", "admission_number", "full_name", "status", "transport_required"]);
+  assert.deepEqual(Object.keys(patch).sort(), ["admission_date", "admission_number", "full_name", "transport_required"]);
+  assert.equal("status" in parsed.data, false);
 });
 
 test("structured address takes precedence over legacy address", () => {

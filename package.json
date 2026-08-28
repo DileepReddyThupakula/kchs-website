@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:student-core": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/student-core-flow.test.mjs"
+    "test:student-core": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/student-core-flow.test.mjs",
+    "test:student-lifecycle": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test tests/student-directory-lifecycle.test.mjs",
+    "test:student-lifecycle:db": "npx supabase test db",
+    "test:student-lifecycle:concurrency": "node --test tests/student-lifecycle-concurrency.test.mjs"
   },
   "dependencies": {
     "@next/third-parties": "latest",

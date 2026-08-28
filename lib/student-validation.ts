@@ -33,7 +33,7 @@ export const studentSchema = z.object({
 export const studentEditSchema = studentSchema.pick({
   admission_number: true, full_name: true, preferred_name: true, date_of_birth: true,
   gender: true, blood_group: true, student_category: true, aadhaar_number: true,
-  nationality: true, mother_tongue: true, admission_date: true, status: true,
+  nationality: true, mother_tongue: true, admission_date: true,
   previous_school_name: true, previous_class: true, previous_school_tc_number: true,
   previous_school_location: true, admission_remarks: true, father_name: true,
   father_mobile: true, father_email: true, father_occupation: true, mother_name: true,
