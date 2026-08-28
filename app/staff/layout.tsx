@@ -9,6 +9,7 @@ import { requireStaff } from "@/lib/staff/auth";
 import "../staff.css";
 import "./staff-detail.css";
 import "./staff-mobile.css";
+import "./staff-navigation-mobile.css";
 import "./staff-status-summary.css";
 import "./staff-dashboard.css";
 import "./staff-navigation.css";

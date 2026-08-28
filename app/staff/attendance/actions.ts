@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { attendanceStatuses } from "@/lib/student-attendance";
+import type { AttendanceActionState } from "@/lib/student-attendance-action-state";
 import { requireAdmin } from "@/lib/staff/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,16 +17,6 @@ const records = z.array(z.object({
   remark: z.string().trim().max(500).optional(),
 })).min(1);
 const reason = z.string().trim().max(1000).optional();
-
-export type AttendanceActionState = {
-  kind: "idle" | "success" | "error" | "stale" | "locked";
-  message?: string;
-  revision?: number;
-  state?: "open" | "locked";
-  sessionId?: string;
-};
-
-export const initialAttendanceActionState: AttendanceActionState = { kind: "idle" };
 
 function failure(operation: string, error: { code?: string; message?: string; details?: string; hint?: string }): AttendanceActionState {
   console.error("Student attendance operation failed.", { operation, code: error.code, message: error.message, details: error.details, hint: error.hint });

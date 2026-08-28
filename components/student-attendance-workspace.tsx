@@ -4,12 +4,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
 import {
-  initialAttendanceActionState,
   lockStudentAttendance,
   saveStudentAttendance,
   unlockStudentAttendance,
 } from "@/app/staff/attendance/actions";
 import type { AttendanceConfiguration, AttendanceRoster, AttendanceRosterRow, AttendanceStatus } from "@/lib/student-attendance";
+import { initialAttendanceActionState, type AttendanceActionState } from "@/lib/student-attendance-action-state";
 
 type WorkspaceProps = {
   configuration: AttendanceConfiguration;
@@ -69,7 +69,7 @@ function AttendanceWorkspaceEditor({ configuration, resolved, roster, rosterErro
   const scopedClasses = configuration.classes.filter((item) => configuration.sections.some((section) => section.academic_year_id === selectedYear && section.class_id === item.id));
   const scopedSections = configuration.sections.filter((section) => section.academic_year_id === selectedYear && section.class_id === selectedClass);
   const reloadHref = `/staff/attendance?${new URLSearchParams({ year: resolved.academicYearId ?? "", class: resolved.classId ?? "", section: resolved.sectionId ?? "", date: resolved.attendanceDate }).toString()}`;
-  const applySuccess = (result: typeof initialAttendanceActionState, afterSuccess?: () => void) => {
+  const applySuccess = (result: AttendanceActionState, afterSuccess?: () => void) => {
     setFeedback(result);
     if (result.kind !== "success") return;
     if (typeof result.revision === "number") setRevision(result.revision);
