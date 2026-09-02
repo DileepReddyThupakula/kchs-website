@@ -1,7 +1,213 @@
 "use client";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { archiveNotice, createNotice, updateNotice } from "@/app/staff/actions";
 import { StaffActionSubmit } from "@/components/staff-action-submit";
 type Notice={id:string;title:string;summary:string|null;content:string;priority:"normal"|"important"|"urgent";status:"draft"|"published"|"archived";published_at:string|null;expires_at:string|null};const noticePriorities=["normal","important","urgent"] as const;const noticePriorityLabels={normal:"Normal",important:"Important",urgent:"Urgent"};function formatNoticeDateTimeInput(value:string|null){if(!value)return "";const date=new Date(value);if(Number.isNaN(date.getTime()))return "";const parts=new Intl.DateTimeFormat("en-CA",{day:"2-digit",hour:"2-digit",hour12:false,minute:"2-digit",month:"2-digit",timeZone:"Asia/Kolkata",year:"numeric"}).formatToParts(date);const part=(type:Intl.DateTimeFormatPartTypes)=>parts.find(item=>item.type===type)?.value??"";return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`}
 function isFuture(value:string){return Boolean(value&&new Date(`${value}:00+05:30`).getTime()>Date.now())}
-export function StaffNoticeForm({notice}:{notice?:Notice}){const[archiveConfirming,setArchiveConfirming]=useState(false);const[publishAt,setPublishAt]=useState(formatNoticeDateTimeInput(notice?.published_at??null));const editing=Boolean(notice);const action=editing?updateNotice:createNotice;const currentStatus=notice?.status??"draft";const publishLabel=isFuture(publishAt)?"Schedule notice":"Publish now";return <div className="staff-notice-form-shell"><form className="staff-notice-form" action={action}><div className="staff-notice-form-grid"><label className="staff-notice-wide">Title<input name="title" required maxLength={180} defaultValue={notice?.title??""}/></label><label className="staff-notice-wide">Summary <span>Optional</span><textarea name="summary" rows={3} maxLength={400} defaultValue={notice?.summary??""}/></label><label className="staff-notice-wide">Content<textarea name="content" required rows={10} maxLength={6000} defaultValue={notice?.content??""}/></label><label>Priority<select name="priority" defaultValue={notice?.priority??"normal"}>{noticePriorities.map(priority=><option key={priority} value={priority}>{noticePriorityLabels[priority]}</option>)}</select></label><label>Publish date and time <span>IST · optional</span><input name="publishedAt" type="datetime-local" value={publishAt} onChange={event=>setPublishAt(event.target.value)}/></label><label>Expiry date and time <span>IST · optional</span><input name="expiresAt" type="datetime-local" defaultValue={formatNoticeDateTimeInput(notice?.expires_at??null)}/></label></div>{editing&&<input type="hidden" name="id" value={notice?.id??""}/>}<div className="staff-notice-form-actions">{currentStatus!=="archived"&&<StaffActionSubmit name="status" value={currentStatus} pendingChildren={currentStatus==="draft"?"Saving draft…":"Saving changes…"}>{currentStatus==="draft"?"Save draft":"Save changes"}</StaffActionSubmit>}{currentStatus==="draft"&&<StaffActionSubmit name="status" value="published" pendingChildren={isFuture(publishAt)?"Scheduling…":"Publishing…"}>{publishLabel}</StaffActionSubmit>}</div></form>{editing&&notice?.status!=="archived"&&<aside className="staff-notice-archive"><p className="staff-card-label">Archive notice</p><p>Remove this notice from the public website while preserving its record.</p>{archiveConfirming?<form action={archiveNotice}><input type="hidden" name="id" value={notice?.id??""}/><p className="staff-archive-confirmation">Archive this notice? This cannot be undone from this screen.</p><div><button type="button" onClick={()=>setArchiveConfirming(false)}>Cancel</button><StaffActionSubmit pendingChildren="Archiving notice…">Archive notice</StaffActionSubmit></div></form>:<button type="button" onClick={()=>setArchiveConfirming(true)}>Archive notice</button>}</aside>}</div>}
+export function StaffNoticeForm({notice}:{notice?:Notice}) {
+  const [archiveConfirming, setArchiveConfirming] = useState(false);
+  const [publishAt, setPublishAt] = useState(formatNoticeDateTimeInput(notice?.published_at ?? null));
+  const editing = Boolean(notice);
+  const action = editing ? updateNotice : createNotice;
+  const currentStatus = notice?.status ?? "draft";
+  const publishLabel = isFuture(publishAt) ? "Schedule notice" : "Publish now";
+
+  return (
+    <motion.div
+      className="staff-notice-form-shell"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      <motion.form
+        className="staff-notice-form"
+        action={action}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        <motion.div className="staff-notice-form-grid">
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.05 }}
+          >
+            <label className="staff-notice-wide">Title</label>
+            <motion.input
+              name="title"
+              required
+              maxLength={180}
+              defaultValue={notice?.title ?? ""}
+              whileHover={{ borderColor: "#d4a84b" }}
+              whileFocus={{ borderColor: "#d4a84b" }}
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+          >
+            <label className="staff-notice-wide">
+              Summary <span>Optional</span>
+            </label>
+            <motion.textarea
+              name="summary"
+              rows={3}
+              maxLength={400}
+              defaultValue={notice?.summary ?? ""}
+              whileHover={{ borderColor: "#d4a84b" }}
+              whileFocus={{ borderColor: "#d4a84b" }}
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+          >
+            <label className="staff-notice-wide">Content</label>
+            <motion.textarea
+              name="content"
+              required
+              rows={10}
+              maxLength={6000}
+              defaultValue={notice?.content ?? ""}
+              whileHover={{ borderColor: "#d4a84b" }}
+              whileFocus={{ borderColor: "#d4a84b" }}
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <label>Priority</label>
+            <motion.select
+              name="priority"
+              defaultValue={notice?.priority ?? "normal"}
+              whileHover={{ borderColor: "#d4a84b" }}
+              whileFocus={{ borderColor: "#d4a84b" }}
+            >
+              {noticePriorities.map(priority => (
+                <motion.option
+                  key={priority}
+                  value={priority}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {noticePriorityLabels[priority]}
+                </motion.option>
+              ))}
+            </motion.select>
+          </motion.div>
+
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+          >
+            <label>Publish date and time <span>IST · optional</span></label>
+            <motion.input
+              name="publishedAt"
+              type="datetime-local"
+              value={publishAt}
+              onChange={event => setPublishAt(event.target.value)}
+              whileHover={{ borderColor: "#d4a84b" }}
+              whileFocus={{ borderColor: "#d4a84b" }}
+            />
+          </motion.div>
+
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.25 }}
+          >
+            <label>Expiry date and time <span>IST · optional</span></label>
+            <motion.input
+              name="expiresAt"
+              type="datetime-local"
+              defaultValue={formatNoticeDateTimeInput(notice?.expires_at ?? null)}
+              whileHover={{ borderColor: "#d4a84b" }}
+              whileFocus={{ borderColor: "#d4a84b" }}
+            />
+          </motion.div>
+        </motion.div>
+
+        {editing && (
+          <motion.input
+            type="hidden"
+            name="id"
+            value={notice?.id ?? ""}
+          />
+        )}
+
+        <motion.div className="staff-notice-form-actions">
+          {currentStatus !== "archived" && (
+            <StaffActionSubmit
+              name="status"
+              value={currentStatus}
+              pendingChildren={currentStatus === "draft" ? "Saving draft…" : "Saving changes…"}
+            >
+              {currentStatus === "draft" ? "Save draft" : "Save changes"}
+            </StaffActionSubmit>
+          )}
+          {currentStatus === "draft" && (
+            <StaffActionSubmit
+              name="status"
+              value="published"
+              pendingChildren={isFuture(publishAt) ? "Scheduling…" : "Publishing…"}
+            >
+              {publishLabel}
+            </StaffActionSubmit>
+          )}
+        </motion.div>
+      </motion.form>
+
+      {editing && notice?.status !== "archived" && (
+        <motion.aside
+          className="staff-notice-archive"
+          initial={{ x: 20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <p className="staff-card-label">Archive notice</p>
+          <p>Remove this notice from the public website while preserving its record.</p>
+          {archiveConfirming ? (
+            <motion.form action={archiveNotice}>
+              <motion.input type="hidden" name="id" value={notice?.id ?? ""} />
+              <p className="staff-archive-confirmation">
+                Archive this notice? This cannot be undone from this screen.
+              </p>
+              <motion.div>
+                <motion.button
+                  type="button"
+                  onClick={() => setArchiveConfirming(false)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Cancel
+                </motion.button>
+                <StaffActionSubmit pendingChildren="Archiving notice…">
+                  Archive notice
+                </StaffActionSubmit>
+              </motion.div>
+            </motion.form>
+          ) : (
+            <motion.button
+              type="button"
+              onClick={() => setArchiveConfirming(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Archive notice
+            </motion.button>
+          )}
+        </motion.aside>
+      )}
+    </motion.div>
+  );
+}
