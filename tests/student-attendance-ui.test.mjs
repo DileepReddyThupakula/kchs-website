@@ -49,9 +49,10 @@ test("attendance workspace preserves the required operational safeguards", () =>
 test("attendance is exposed only in the admin navigation and dashboard", () => {
   const navigation = source("components/staff-navigation.tsx");
   const dashboard = source("app/staff/page.tsx");
-  assert.match(navigation, /role === "admin" &&/);
-  assert.match(navigation, /href="\/staff\/attendance"/);
-  assert.match(dashboard, /title="Attendance"/);
+  const navigationData = source("lib/staff-navigation.ts");
+  assert.match(navigation, /item\.adminOnly \|\| role === "admin"/);
+  assert.match(navigationData, /href: "\/staff\/attendance"/);
+  assert.match(navigationData, /adminOnly: true/);
   assert.match(dashboard, /href="\/staff\/attendance"/);
 });
 

@@ -27,18 +27,19 @@ export default function SiteHeader() {
   const [open, setOpen] = useState(false); const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   useEffect(() => { const check = () => setScrolled(window.scrollY > 18); check(); window.addEventListener("scroll", check, { passive: true }); return () => window.removeEventListener("scroll", check); }, []);
+  const isReducedMotion = useReducedMotion();
 
   return (
     <motion.header
       className={`site-header${scrolled ? " site-header--scrolled" : ""}`}
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={reducedMotion ? { duration: 0 } : { duration: 0.8, ease: [0.6, -0.05, 0.01, 0.99] }}
+      transition={isReducedMotion ? { duration: 0 } : { duration: 0.8, ease: [0.6, -0.05, 0.01, 0.99] }}
     >
       <motion.div
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={reducedMotion ? { duration: 0 } : { duration: 0.6, delay: 0.2 }}
+        transition={isReducedMotion ? { duration: 0 } : { duration: 0.6, delay: 0.2 }}
       >
         <Link href="/" className="brand" aria-label="Krishna Chaitanya High School home"><SchoolMark /></Link>
       </motion.div>
@@ -48,8 +49,8 @@ export default function SiteHeader() {
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-controls="school-navigation"
-        whileHover={{ scale: reducedMotion ? 1 : 1.1 }}
-        whileTap={{ scale: reducedMotion ? 1 : 0.9 }}
+        whileHover={{ scale: isReducedMotion ? 1 : 1.1 }}
+        whileTap={{ scale: isReducedMotion ? 1 : 0.9 }}
       >
         <span /><span /><span className="sr-only">Toggle navigation</span>
       </motion.button>
@@ -60,34 +61,37 @@ export default function SiteHeader() {
         aria-label="Main navigation"
         initial={{ x: 100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={reducedMotion ? { duration: 0 } : { duration: 0.6, delay: 0.4 }}
+        transition={isReducedMotion ? { duration: 0 } : { duration: 0.6, delay: 0.4 }}
       >
         {links.map(([label, href]) => {
           const target = href.startsWith("#") && pathname !== "/" ? `/${href}` : href;
           const active = href === pathname;
           return (
-            <motion.Link
+            <motion.div
               key={href}
-              onClick={() => setOpen(false)}
-              href={target}
-              className={active ? "nav-active" : undefined}
-              aria-current={active ? "page" : undefined}
-              whileHover={{ scale: reducedMotion ? 1 : 1.05 }}
-              whileTap={{ scale: reducedMotion ? 1 : 0.95 }}
+              whileHover={{ scale: isReducedMotion ? 1 : 1.05 }}
+              whileTap={{ scale: isReducedMotion ? 1 : 0.95 }}
             >
-              {label}
-            </motion.Link>
+              <Link
+                onClick={() => setOpen(false)}
+                href={target}
+                className={active ? "nav-active" : undefined}
+                aria-current={active ? "page" : undefined}
+              >
+                {label}
+              </Link>
+            </motion.div>
           );
         })}
-        <motion.Link
+        <motion.div
           onClick={() => setOpen(false)}
-          className="nav-staff"
-          href="/login"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          Staff Login <span>→</span>
-        </motion.Link>
+          <Link className="nav-staff" href="/login">
+            Staff Login <span>→</span>
+          </Link>
+        </motion.div>
       </motion.nav>
 
       {/* Mobile menu overlay */}
@@ -96,53 +100,56 @@ export default function SiteHeader() {
           className="mobile-menu-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={reducedMotion ? { duration: 0 } : { duration: 0.3 }}
+          transition={isReducedMotion ? { duration: 0 } : { duration: 0.3 }}
           onClick={() => setOpen(false)}
         >
           <motion.nav
             className="mobile-menu"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={reducedMotion ? { duration: 0 } : { duration: 0.4 }}
+            transition={isReducedMotion ? { duration: 0 } : { duration: 0.4 }}
           >
             {links.map(([label, href]) => {
               const target = href.startsWith("#") && pathname !== "/" ? `/${href}` : href;
               const active = href === pathname;
               return (
-                <motion.Link
+                <motion.div
                   key={href}
-                  onClick={() => setOpen(false)}
-                  href={target}
-                  className={active ? "nav-active" : undefined}
-                  aria-current={active ? "page" : undefined}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                 >
-                  {label}
-                </motion.Link>
+                  <Link
+                    onClick={() => setOpen(false)}
+                    href={target}
+                    className={active ? "nav-active" : undefined}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {label}
+                  </Link>
+                </motion.div>
               );
             })}
-            <motion.Link
+            <motion.div
               onClick={() => setOpen(false)}
-              className="nav-staff"
-              href="/login"
-              whileHover={{ scale: reducedMotion ? 1 : 1.03 }}
-              whileTap={{ scale: reducedMotion ? 1 : 0.97 }}
+              whileHover={{ scale: isReducedMotion ? 1 : 1.03 }}
+              whileTap={{ scale: isReducedMotion ? 1 : 0.97 }}
             >
-              Staff Login <span>→</span>
-            </motion.Link>
+              <Link className="nav-staff" href="/login">
+                Staff Login <span>→</span>
+              </Link>
+            </motion.div>
           </motion.nav>
         </motion.div>
       )}
 
-      <motion.Link
-        className="staff-login"
-        href="/login"
-        whileHover={{ scale: reducedMotion ? 1 : 1.05 }}
-        whileTap={{ scale: reducedMotion ? 1 : 0.95 }}
+      <motion.div
+        whileHover={{ scale: isReducedMotion ? 1 : 1.05 }}
+        whileTap={{ scale: isReducedMotion ? 1 : 0.95 }}
       >
-        Staff Login <span>→</span>
-      </motion.Link>
+        <Link className="staff-login" href="/login">
+          Staff Login <span>→</span>
+        </Link>
+      </motion.div>
     </motion.header>
   );
 }
