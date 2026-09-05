@@ -1,24 +1,13 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
+const query = "(prefers-reduced-motion: reduce)";
+function subscribe(onChange: () => void) {
+  const media = window.matchMedia(query);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+// Conservative, identical server/hydration output, then the browser preference.
 export function useReducedMotion(): boolean {
-  const [reducedMotion, setReducedMotion] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-    const handleChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-
-    mediaQuery.addEventListener("change", handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
-  }, []);
-
-  return reducedMotion;
+  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches, () => true);
 }

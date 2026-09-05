@@ -2,10 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 const links = [
   ["About", "#about"],
@@ -24,132 +22,83 @@ export function SchoolMark({ dark = false }: { dark?: boolean }) {
 }
 
 export default function SiteHeader() {
-  const [open, setOpen] = useState(false); const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const header = useRef<HTMLElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
-  useEffect(() => { const check = () => setScrolled(window.scrollY > 18); check(); window.addEventListener("scroll", check, { passive: true }); return () => window.removeEventListener("scroll", check); }, []);
-  const isReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    const check = () => setScrolled(window.scrollY > 18);
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
+  }, []);
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1201px)");
+    const resize = () => { if (desktop.matches) setOpen(false); };
+    desktop.addEventListener("change", resize);
+    return () => desktop.removeEventListener("change", resize);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !header.current?.contains(event.target)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        trigger.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
+  const followLink = () => {
+    if (open) {
+      setOpen(false);
+      trigger.current?.focus();
+    }
+  };
 
   return (
-    <motion.header
+    <header
+      ref={header}
       className={`site-header${scrolled ? " site-header--scrolled" : ""}`}
-      initial={{ y: -100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={isReducedMotion ? { duration: 0 } : { duration: 0.8, ease: [0.6, -0.05, 0.01, 0.99] }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
     >
-      <motion.div
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={isReducedMotion ? { duration: 0 } : { duration: 0.6, delay: 0.2 }}
-      >
-        <Link href="/" className="brand" aria-label="Krishna Chaitanya High School home"><SchoolMark /></Link>
-      </motion.div>
-
-      <motion.button
+      <Link href="/" className="brand" aria-label="Krishna Chaitanya High School home"><SchoolMark /></Link>
+      <button
+        ref={trigger}
+        type="button"
         className="menu-toggle"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-controls="school-navigation"
-        whileHover={{ scale: isReducedMotion ? 1 : 1.1 }}
-        whileTap={{ scale: isReducedMotion ? 1 : 0.9 }}
+        aria-label={open ? "Close navigation" : "Open navigation"}
       >
-        <span /><span /><span className="sr-only">Toggle navigation</span>
-      </motion.button>
-
-      <motion.nav
-        id="school-navigation"
-        className={open ? "nav-open" : ""}
-        aria-label="Main navigation"
-        initial={{ x: 100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={isReducedMotion ? { duration: 0 } : { duration: 0.6, delay: 0.4 }}
-      >
+        <span aria-hidden="true" /><span aria-hidden="true" />
+      </button>
+      {/* Non-modal disclosure: one nav, normal Tab order, no background trapping. */}
+      <nav id="school-navigation" className={open ? "nav-open" : undefined} aria-label="Main navigation">
         {links.map(([label, href]) => {
           const target = href.startsWith("#") && pathname !== "/" ? `/${href}` : href;
           const active = href === pathname;
-          return (
-            <motion.div
-              key={href}
-              whileHover={{ scale: isReducedMotion ? 1 : 1.05 }}
-              whileTap={{ scale: isReducedMotion ? 1 : 0.95 }}
-            >
-              <Link
-                onClick={() => setOpen(false)}
-                href={target}
-                className={active ? "nav-active" : undefined}
-                aria-current={active ? "page" : undefined}
-              >
-                {label}
-              </Link>
-            </motion.div>
-          );
+          return <Link key={href} href={target} onClick={followLink} className={active ? "nav-active" : undefined} aria-current={active ? "page" : undefined}>{label}</Link>;
         })}
-        <motion.div
-          onClick={() => setOpen(false)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Link className="nav-staff" href="/login">
-            Staff Login <span>→</span>
-          </Link>
-        </motion.div>
-      </motion.nav>
-
-      {/* Mobile menu overlay */}
-      {open && (
-        <motion.div
-          className="mobile-menu-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={isReducedMotion ? { duration: 0 } : { duration: 0.3 }}
-          onClick={() => setOpen(false)}
-        >
-          <motion.nav
-            className="mobile-menu"
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={isReducedMotion ? { duration: 0 } : { duration: 0.4 }}
-          >
-            {links.map(([label, href]) => {
-              const target = href.startsWith("#") && pathname !== "/" ? `/${href}` : href;
-              const active = href === pathname;
-              return (
-                <motion.div
-                  key={href}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  <Link
-                    onClick={() => setOpen(false)}
-                    href={target}
-                    className={active ? "nav-active" : undefined}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    {label}
-                  </Link>
-                </motion.div>
-              );
-            })}
-            <motion.div
-              onClick={() => setOpen(false)}
-              whileHover={{ scale: isReducedMotion ? 1 : 1.03 }}
-              whileTap={{ scale: isReducedMotion ? 1 : 0.97 }}
-            >
-              <Link className="nav-staff" href="/login">
-                Staff Login <span>→</span>
-              </Link>
-            </motion.div>
-          </motion.nav>
-        </motion.div>
-      )}
-
-      <motion.div
-        whileHover={{ scale: isReducedMotion ? 1 : 1.05 }}
-        whileTap={{ scale: isReducedMotion ? 1 : 0.95 }}
-      >
-        <Link className="staff-login" href="/login">
-          Staff Login <span>→</span>
-        </Link>
-      </motion.div>
-    </motion.header>
+        <Link className="nav-staff" href="/login" onClick={followLink}>Staff Login <span aria-hidden="true">→</span></Link>
+      </nav>
+      <Link className="staff-login" href="/login">Staff Login <span aria-hidden="true">→</span></Link>
+    </header>
   );
 }
