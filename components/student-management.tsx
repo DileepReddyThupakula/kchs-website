@@ -24,7 +24,7 @@ export async function StudentsOverview({params,filters}:{params:{created?:string
         <h1>Students</h1>
         <p>Manage student profiles, enrollment, and academic information.</p>
       </div>
-      <Link className="staff-action-submit" href="/staff/students/new">+ Add New Student</Link>
+      <div className="student-directory-actions"><Link className="student-import-secondary-link" href="/staff/students/import">Bulk Import</Link><Link className="staff-action-submit" href="/staff/students/new">+ Add New Student</Link></div>
     </header>
     <Feedback params={params} success={params.updated?"Student updated successfully.":"Student created successfully."}/>
     <section className="student-summary" aria-label="Student summary">
