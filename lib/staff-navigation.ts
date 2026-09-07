@@ -28,6 +28,7 @@ export type StaffNavigationItem = {
 
 export type StaffNavigationSection = {
   collapsible?: boolean;
+  icon?: StaffNavigationIcon;
   items: StaffNavigationItem[];
   label: string;
 };
@@ -104,13 +105,14 @@ export const comingSoonModules = {
 export type ComingSoonSlug = keyof typeof comingSoonModules;
 
 export const staffNavigationSections: StaffNavigationSection[] = [
-  { label: "Main", items: [{ href: "/staff", icon: "dashboard", label: "Dashboard" }] },
+  { label: "Overview", items: [{ href: "/staff", icon: "dashboard", label: "Dashboard" }] },
   { label: "Admissions", items: [{ href: "/staff/admissions", icon: "notice", label: "Enquiries" }] },
   {
     collapsible: true,
-    label: "Student Management",
+    icon: "student",
+    label: "Students",
     items: [
-      { adminOnly: true, href: "/staff/students", icon: "student", label: "Students" },
+      { adminOnly: true, href: "/staff/students", icon: "student", label: "Student Directory" },
       { adminOnly: true, href: "/staff/attendance", icon: "attendance", label: "Attendance" },
       { adminOnly: true, href: "/staff/homework", icon: "homework", label: "Homework / Classwork" },
       { adminOnly: true, href: "/staff/exams", icon: "academic", label: "Exams & Marks" },
@@ -118,19 +120,30 @@ export const staffNavigationSections: StaffNavigationSection[] = [
   },
   {
     collapsible: true,
-    label: "School Management",
+    icon: "academic",
+    label: "Academics",
     items: [
-      { adminOnly: true, href: "/staff/staff", icon: "people", label: "Staff" },
-      { href: "/staff/faculty", icon: "people", label: "Faculty" },
       { adminOnly: true, href: "/staff/academics", icon: "academic", label: "Classes & Sections", match: "/staff/academics" },
       { adminOnly: true, href: "/staff/timetable", icon: "timetable", label: "Timetable" },
+      { adminOnly: true, href: "/staff/academic-year", icon: "academic", label: "Academic Year & Promotion" },
+    ],
+  },
+  {
+    collapsible: true,
+    icon: "people",
+    label: "Staff",
+    items: [
+      { adminOnly: true, href: "/staff/staff", icon: "people", label: "Staff Directory" },
+      { href: "/staff/faculty", icon: "people", label: "Faculty" },
+      { adminOnly: true, href: "/staff/staff-attendance", icon: "attendance", label: "Staff Attendance" },
+      { adminOnly: true, href: "/staff/payroll", icon: "fees", label: "Payroll" },
     ],
   },
   { label: "Finance", items: [{ adminOnly: true, href: "/staff/fees", icon: "fees", label: "Fees Management" }] },
   {
     label: "Communication",
     items: [
-      { href: "/staff/notices", icon: "notice", label: "Notices & Announcements", match: "/staff/notices" },
+      { href: "/staff/notices", icon: "notice", label: "Notices", match: "/staff/notices" },
       { href: "/staff/events", icon: "event", label: "Events" },
       { href: "/staff/gallery", icon: "gallery", label: "Gallery" },
     ],
@@ -138,21 +151,13 @@ export const staffNavigationSections: StaffNavigationSection[] = [
   { label: "Documents", items: [{ href: "/staff/documents", icon: "document", label: "Certificates & Documents", match: "/staff/documents" }] },
   {
     collapsible: true,
-    label: "System",
+    icon: "security",
+    label: "Administration",
     items: [
-      { adminOnly: true, href: "/staff/academic-year", icon: "academic", label: "Academic Year & Promotion" },
       { adminOnly: true, href: "/staff/reports", icon: "report", label: "Reports" },
-      { adminOnly: true, href: "/staff/users", icon: "user", label: "User & Role Management" },
-      { adminOnly: true, href: "/staff/audit", icon: "security", label: "Security & Audit Log" },
+      { adminOnly: true, href: "/staff/users", icon: "user", label: "Users & Roles" },
+      { adminOnly: true, href: "/staff/audit", icon: "security", label: "Security & Audit" },
       { adminOnly: true, href: "/staff/backup", icon: "backup", label: "Backup & Export" },
-    ],
-  },
-  {
-    collapsible: true,
-    label: "Staff Operations",
-    items: [
-      { adminOnly: true, href: "/staff/staff-attendance", icon: "attendance", label: "Staff Attendance" },
-      { adminOnly: true, href: "/staff/payroll", icon: "fees", label: "Payroll" },
     ],
   },
 ];
