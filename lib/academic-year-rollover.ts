@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/staff/auth";
+import { logStaffTiming } from "@/lib/staff/performance";
 import { createClient } from "@/lib/supabase/server";
 
 const uuid = z.preprocess(
@@ -277,40 +278,54 @@ const emptyWorkspaceData = (): AcademicRolloverWorkspaceData => ({
 });
 
 export async function getAcademicYearRolloverWorkspaceData(): Promise<AcademicRolloverWorkspaceData> {
+  const loaderStartedAt = performance.now();
   await requireAdmin();
   const supabase = await createClient();
+  const yearsWaveStartedAt = performance.now();
   const years = await supabase.from("academic_years").select("id,label,start_date,end_date,status").in("status", ["current", "planning"]).order("start_date", { ascending: true });
+  logStaffTiming("academic-rollover-years-query-wave", yearsWaveStartedAt, years.error ? "failed" : "success", "query-wave");
   if (years.error) {
     console.error("Academic rollover workspace year lookup failed.", { operation: "workspace", code: years.error.code });
+    logStaffTiming("academic-rollover-workspace-loader", loaderStartedAt, "failed", "loader");
     return emptyWorkspaceData();
   }
 
   const sourceYear = (years.data ?? []).find((year) => year.status === "current");
-  if (!sourceYear) return { ...emptyWorkspaceData(), failed: false };
+  if (!sourceYear) {
+    logStaffTiming("academic-rollover-workspace-loader", loaderStartedAt, "success", "loader");
+    return { ...emptyWorkspaceData(), failed: false };
+  }
   const targetYears = (years.data ?? []).filter((year) => year.status === "planning" && year.start_date > sourceYear.start_date);
   const relevantYearIds = [sourceYear.id, ...targetYears.map((year) => year.id)];
+  const structureWaveStartedAt = performance.now();
   const [classes, sections, enrollments] = await Promise.all([
     supabase.from("school_classes").select("id,name,display_order,active").eq("active", true).order("display_order").order("name"),
     supabase.from("academic_sections").select("id,name,academic_year_id,class_id,active").eq("active", true).in("academic_year_id", relevantYearIds).order("name"),
     supabase.from("student_enrollments").select("id,student_id,class_id,academic_section_id,roll_number,enrollment_date").eq("academic_year_id", sourceYear.id).eq("status", "active").order("student_id"),
   ]);
   const failedQuery = classes.error ?? sections.error ?? enrollments.error;
+  logStaffTiming("academic-rollover-structure-query-wave", structureWaveStartedAt, failedQuery ? "failed" : "success", "query-wave");
   if (failedQuery) {
     console.error("Academic rollover workspace lookup failed.", { operation: "workspace", code: failedQuery.code });
+    logStaffTiming("academic-rollover-workspace-loader", loaderStartedAt, "failed", "loader");
     return emptyWorkspaceData();
   }
 
   const enrollmentRows = enrollments.data ?? [];
   const studentIds = [...new Set(enrollmentRows.map((row) => row.student_id))];
+  const studentsWaveStartedAt = performance.now();
   const students = studentIds.length
     ? await supabase.from("students").select("id,admission_number,full_name,status").in("id", studentIds)
     : { data: [], error: null };
+  logStaffTiming("academic-rollover-students-query-wave", studentsWaveStartedAt, students.error ? "failed" : "success", "query-wave");
   if (students.error) {
     console.error("Academic rollover workspace student lookup failed.", { operation: "workspace", code: students.error.code });
+    logStaffTiming("academic-rollover-workspace-loader", loaderStartedAt, "failed", "loader");
     return emptyWorkspaceData();
   }
   const studentById = new Map((students.data ?? []).map((student) => [student.id, student]));
 
+  logStaffTiming("academic-rollover-workspace-loader", loaderStartedAt, "success", "loader");
   return {
     failed: false,
     sourceYear: sourceYear as AcademicRolloverWorkspaceData["sourceYear"],

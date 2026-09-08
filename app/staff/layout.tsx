@@ -30,6 +30,7 @@ import "./staff-academic-feedback.css";
 import "./staff-academic-rollover.css";
 import "./staff-coming-soon.css";
 import "./staff-erp-shell.css";
+import "./staff-loading.css";
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const staff = await requireStaff();

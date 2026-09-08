@@ -3,7 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { logStaffPerformance } from "@/lib/staff/performance";
+import { logStaffTiming } from "@/lib/staff/performance";
 import { createClient } from "@/lib/supabase/server";
 
 export type StaffRole = "admin" | "staff";
@@ -21,10 +21,10 @@ export const getCurrentStaff = cache(async (): Promise<CurrentStaff | null> => {
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
   const claims = claimsData?.claims;
   const userId = typeof claims?.sub === "string" ? claims.sub : null;
-  logStaffPerformance("staff-identity-verification", identityStartedAt, claimsError || !userId ? "unavailable" : "success");
+  logStaffTiming("staff-identity-verification", identityStartedAt, claimsError || !userId ? "unavailable" : "success", "authorization");
 
   if (!userId) {
-    logStaffPerformance("staff-authorisation", authorisationStartedAt, "unavailable");
+    logStaffTiming("staff-authorisation", authorisationStartedAt, "unavailable", "authorization");
     return null;
   }
 
@@ -36,14 +36,14 @@ export const getCurrentStaff = cache(async (): Promise<CurrentStaff | null> => {
     .maybeSingle();
 
   const authorised = !error && staffUser?.active && (staffUser.role === "admin" || staffUser.role === "staff");
-  logStaffPerformance("staff-users-authorisation", staffLookupStartedAt, authorised ? "allowed" : "not-authorised");
+  logStaffTiming("staff-users-authorisation", staffLookupStartedAt, authorised ? "allowed" : "not-authorised", "authorization");
 
   if (!authorised) {
-    logStaffPerformance("staff-authorisation", authorisationStartedAt, "not-authorised");
+    logStaffTiming("staff-authorisation", authorisationStartedAt, "not-authorised", "authorization");
     return null;
   }
 
-  logStaffPerformance("staff-authorisation", authorisationStartedAt, "allowed");
+  logStaffTiming("staff-authorisation", authorisationStartedAt, "allowed", "authorization");
   return { email: typeof claims?.email === "string" ? claims.email : null, role: staffUser.role, userId };
 });
 

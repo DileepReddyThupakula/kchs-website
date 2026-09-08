@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { logStaffTiming } from "@/lib/staff/performance";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -21,7 +22,11 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getClaims();
+  const claimsStartedAt = performance.now();
+  const { error: claimsError } = await supabase.auth.getClaims();
+  if (request.nextUrl.pathname === "/staff" || request.nextUrl.pathname.startsWith("/staff/")) {
+    logStaffTiming("staff-proxy-identity-verification", claimsStartedAt, claimsError ? "unavailable" : "success", "authorization");
+  }
   return response;
 }
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAdmin } from "@/lib/staff/auth";
+import { logStaffTiming } from "@/lib/staff/performance";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AcademicData,
@@ -22,9 +23,27 @@ export type {
   Subject,
 } from "@/lib/academics/types";
 
-export async function academicData(): Promise<AcademicData> {
+export async function academicYears(): Promise<AcademicYear[]> {
+  const loaderStartedAt = performance.now();
   await requireAdmin();
   const supabase = await createClient();
+  const queryWaveStartedAt = performance.now();
+  const result = await supabase
+    .from("academic_years")
+    .select("id,label,start_date,end_date,status")
+    .order("start_date", { ascending: false })
+    .limit(30);
+  const outcome = result.error ? "failed" : "success";
+  logStaffTiming("academic-years-query-wave", queryWaveStartedAt, outcome, "query-wave");
+  logStaffTiming("academic-years-loader", loaderStartedAt, outcome, "loader");
+  return (result.data ?? []) as AcademicYear[];
+}
+
+export async function academicData(): Promise<AcademicData> {
+  const loaderStartedAt = performance.now();
+  await requireAdmin();
+  const supabase = await createClient();
+  const queryWaveStartedAt = performance.now();
   const [years, classes, sections, subjects, staffMembers, assignments] = await Promise.all([
     supabase.from("academic_years").select("id,label,start_date,end_date,status").order("start_date", { ascending: false }).limit(30),
     supabase.from("school_classes").select("id,name,display_order,active").order("display_order").limit(30),
@@ -33,6 +52,11 @@ export async function academicData(): Promise<AcademicData> {
     supabase.from("staff_members").select("id,full_name,designation,staff_type,employment_status").order("full_name").limit(300),
     supabase.from("section_subject_assignments").select("id,academic_section_id,subject_id,teacher_id").limit(1000),
   ]);
+
+  const failed = years.error ?? classes.error ?? sections.error ?? subjects.error ?? staffMembers.error ?? assignments.error;
+  const outcome = failed ? "failed" : "success";
+  logStaffTiming("academic-data-query-wave", queryWaveStartedAt, outcome, "query-wave");
+  logStaffTiming("academic-data-loader", loaderStartedAt, outcome, "loader");
 
   const allStaff = (staffMembers.data ?? []) as StaffMember[];
   return {

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { requireAdmin } from "@/lib/staff/auth";
+import { logStaffTiming } from "@/lib/staff/performance";
 import { createClient } from "@/lib/supabase/server";
 
 type AttendanceSession = { academic_section_id: string; class_id: string; id: string; state: "locked" | "open" };
@@ -28,9 +29,11 @@ function logDashboardError(operation: string, error: { code?: string } | null) {
 }
 
 export async function getAdminDashboardOverview(): Promise<AdminDashboardOverview> {
+  const loaderStartedAt = performance.now();
   await requireAdmin();
   const supabase = await createClient();
   const date = todayInIndia();
+  const overviewWaveStartedAt = performance.now();
   const [students, staff, classes, currentYear, sessions, notices, events] = await Promise.all([
     supabase.from("students").select("id", { count: "exact", head: true }),
     supabase.from("staff_members").select("id", { count: "exact", head: true }),
@@ -40,6 +43,10 @@ export async function getAdminDashboardOverview(): Promise<AdminDashboardOvervie
     supabase.from("notices").select("id,title,published_at,updated_at").eq("status", "published").order("published_at", { ascending: false, nullsFirst: false }).limit(3),
     supabase.from("events").select("id,title,event_type,start_at").eq("status", "published").gte("start_at", new Date().toISOString()).order("start_at").limit(3),
   ]);
+
+  const overviewError = students.error ?? staff.error ?? classes.error ?? currentYear.error ?? sessions.error ?? notices.error ?? events.error;
+  logStaffTiming("staff-dashboard-overview-query-wave", overviewWaveStartedAt, overviewError ? "failed" : "success", "query-wave");
+  let loaderFailed = Boolean(overviewError);
 
   logDashboardError("students", students.error);
   logDashboardError("staff", staff.error);
@@ -57,19 +64,25 @@ export async function getAdminDashboardOverview(): Promise<AdminDashboardOvervie
   let sectionsById = new Map<string, string>();
 
   if (sessionIds.length) {
+    const attendanceWaveStartedAt = performance.now();
     const [recordsResult, classesResult, sectionsResult] = await Promise.all([
       supabase.from("student_attendance_records").select("attendance_session_id,status").in("attendance_session_id", sessionIds).limit(5000),
       supabase.from("school_classes").select("id,name").in("id", [...new Set(attendanceSessions.map((session) => session.class_id))]),
       supabase.from("academic_sections").select("id,name,class_id").in("id", [...new Set(attendanceSessions.map((session) => session.academic_section_id))]),
     ]);
+    const attendanceError = recordsResult.error ?? classesResult.error ?? sectionsResult.error;
+    logStaffTiming("staff-dashboard-attendance-query-wave", attendanceWaveStartedAt, attendanceError ? "failed" : "success", "query-wave");
     logDashboardError("attendance-records", recordsResult.error);
     logDashboardError("attendance-classes", classesResult.error);
     logDashboardError("attendance-sections", sectionsResult.error);
-    attendanceFailed ||= Boolean(recordsResult.error ?? classesResult.error ?? sectionsResult.error);
+    attendanceFailed ||= Boolean(attendanceError);
+    loaderFailed ||= Boolean(attendanceError);
     records = (recordsResult.data ?? []) as AttendanceRecord[];
     classesById = new Map(((classesResult.data ?? []) as SchoolClass[]).map((item) => [item.id, item.name]));
     sectionsById = new Map(((sectionsResult.data ?? []) as AcademicSection[]).map((item) => [item.id, item.name]));
   }
+
+  logStaffTiming("staff-dashboard-loader", loaderStartedAt, loaderFailed ? "failed" : "success", "loader");
 
   return {
     attendance: {
