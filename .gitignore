@@ -10,3 +10,8 @@ coverage/
 .vercel
 .mcp.json
 supabase/.temp/
+.playwright-cli/
+.playwright-mcp/
+e2e-phase4a-students.csv
+SYSTEM_SUMMARY.md
+opencode.json
