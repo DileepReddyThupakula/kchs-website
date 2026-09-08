@@ -27,6 +27,7 @@ import "./staff-student-validation.css";
 import "./staff-attendance.css";
 import "./staff-cosmetics.css";
 import "./staff-academic-feedback.css";
+import "./staff-academic-rollover.css";
 import "./staff-coming-soon.css";
 import "./staff-erp-shell.css";
 
