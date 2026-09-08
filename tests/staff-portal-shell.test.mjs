@@ -9,14 +9,25 @@ const allItems = staffNavigationSections.flatMap((section) => section.items);
 
 test("admin navigation covers the approved portal destinations without transport or library", () => {
   const destinations = allItems.map((item) => item.href);
-  for (const href of ["/staff", "/staff/admissions", "/staff/students", "/staff/attendance", "/staff/homework", "/staff/exams", "/staff/staff", "/staff/academics", "/staff/timetable", "/staff/fees", "/staff/notices", "/staff/events", "/staff/gallery", "/staff/documents", "/staff/academic-year", "/staff/reports", "/staff/users", "/staff/audit", "/staff/backup", "/staff/staff-attendance", "/staff/payroll"]) assert.ok(destinations.includes(href), `missing ${href}`);
+  for (const href of ["/staff", "/staff/admissions", "/staff/students", "/staff/attendance", "/staff/homework", "/staff/exams", "/staff/staff", "/staff/academics", "/staff/timetable", "/staff/fees", "/staff/notices", "/staff/events", "/staff/gallery", "/staff/documents", "/staff/academics/years", "/staff/reports", "/staff/users", "/staff/audit", "/staff/backup", "/staff/staff-attendance", "/staff/payroll"]) assert.ok(destinations.includes(href), `missing ${href}`);
   assert.ok(!destinations.some((href) => /transport|library/.test(href)));
 });
 
 test("existing functional destinations remain separate from Coming Soon routes", () => {
   for (const route of ["admissions", "students", "attendance", "staff", "academics", "notices", "events", "gallery", "documents", "faculty"]) assert.ok(existsSync(new URL(`../app/staff/${route}/page.tsx`, import.meta.url)));
-  for (const slug of ["homework", "exams", "timetable", "fees", "academic-year", "reports", "users", "audit", "backup", "staff-attendance", "payroll"]) assert.ok(isComingSoonSlug(slug));
+  for (const slug of ["homework", "exams", "timetable", "fees", "reports", "users", "audit", "backup", "staff-attendance", "payroll"]) assert.ok(isComingSoonSlug(slug));
   assert.ok(existsSync(new URL("../app/staff/(admin-coming-soon)/[comingSoon]/page.tsx", import.meta.url)));
+});
+
+test("academic year navigation opens the real management workflow and keeps rollover active", () => {
+  const academicYear = allItems.find((item) => item.label === "Academic Year & Promotion");
+  assert.ok(academicYear);
+  assert.equal(academicYear.href, "/staff/academics/years");
+  assert.equal(isStaffNavigationActive("/staff/academics/years", academicYear), true);
+  assert.equal(isStaffNavigationActive("/staff/academics/rollover", academicYear), true);
+  assert.equal(isStaffNavigationActive("/staff/academics/classes", academicYear), false);
+  assert.equal(isStaffNavigationActive("/staff/academics/years", allItems.find((item) => item.label === "Classes & Sections")), false);
+  assert.match(readFileSync(new URL("../app/staff/academic-year/page.tsx", import.meta.url), "utf8"), /redirect\("\/staff\/academics\/years"\)/);
 });
 
 test("navigation active state uses a route prefix without marking dashboard active for every staff page", () => {

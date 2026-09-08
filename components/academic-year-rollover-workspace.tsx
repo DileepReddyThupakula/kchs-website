@@ -22,6 +22,12 @@ type RolloverRow = AcademicRolloverWorkspaceData["sourceEnrollments"][number] & 
   reason: string;
 };
 
+type CompletedRollover = {
+  result: AcademicRolloverExecutionResult;
+  sourceLabel: string;
+  targetLabel: string;
+};
+
 const outcomes: { value: Outcome; label: string }[] = [
   { value: "promote", label: "Promote" },
   { value: "repeat", label: "Repeat" },
@@ -91,8 +97,9 @@ export function AcademicYearRolloverWorkspace({ data }: { data: AcademicRollover
   const [bulkOutcome, setBulkOutcome] = useState<Outcome>("promote");
   const [preview, setPreview] = useState<AcademicRolloverPreview | null>(null);
   const [preflightPlan, setPreflightPlan] = useState<AcademicRolloverPlan | null>(null);
+  const [previewInvalidated, setPreviewInvalidated] = useState(false);
   const [error, setError] = useState<RolloverError | null>(null);
-  const [completed, setCompleted] = useState<AcademicRolloverExecutionResult | null>(null);
+  const [completed, setCompleted] = useState<CompletedRollover | null>(null);
   const [pending, setPending] = useState<PendingAction>(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
 
@@ -144,10 +151,20 @@ export function AcademicYearRolloverWorkspace({ data }: { data: AcademicRollover
   const planComplete = Boolean(plan && plan.items.length === data.sourceEnrollments.length && summary.incomplete === 0);
   const sourceLabel = data.sourceYear?.label ?? "No current year";
   const targetLabel = targetYearById.get(targetYearId)?.label ?? "Select a target year";
+  const preflightStatusLabel = previewInvalidated ? "Preview invalidated by edits" : preview?.ready ? "Preview current" : "Before execution";
+  const preflightStatusCopy = previewInvalidated
+    ? "Run the authoritative preflight again before execution."
+    : preview?.ready
+      ? "Review the ready preview above before confirming execution."
+      : planComplete
+        ? "Run the authoritative preflight when every row has a required placement."
+        : `${summary.incomplete} row${summary.incomplete === 1 ? " is" : "s are"} missing a target class or section.`;
 
   function invalidatePreview() {
+    const hadReadyPreview = Boolean(preview?.ready && preflightPlan);
     setPreview(null);
     setPreflightPlan(null);
+    setPreviewInvalidated(hadReadyPreview);
     setError(null);
     setCompleted(null);
   }
@@ -192,6 +209,7 @@ export function AcademicYearRolloverWorkspace({ data }: { data: AcademicRollover
     setCompleted(null);
     setPreview(null);
     setPreflightPlan(null);
+    setPreviewInvalidated(false);
     try {
       const result = await preflightAcademicYearRolloverAction(plan);
       if (result.ok) {
@@ -213,9 +231,10 @@ export function AcademicYearRolloverWorkspace({ data }: { data: AcademicRollover
     try {
       const result = await executeAcademicYearRolloverAction({ ...preflightPlan, expectedFingerprint: preview.fingerprint });
       if (result.ok) {
-        setCompleted(result.data);
+        setCompleted({ result: result.data, sourceLabel, targetLabel });
         setPreview(null);
         setPreflightPlan(null);
+        setPreviewInvalidated(false);
       } else {
         setError(result.error);
         if (result.error.category === "stale_preview") {
@@ -232,14 +251,14 @@ export function AcademicYearRolloverWorkspace({ data }: { data: AcademicRollover
 
   if (data.failed) return <section className="rollover-empty" role="alert"><p className="academic-kicker">Academic operations</p><h1>Rollover workspace unavailable</h1><p>We could not read the academic structure. Refresh the page and try again.</p><Link className="rollover-secondary-button" href="/staff/academics/rollover">Refresh workspace</Link></section>;
   if (!data.sourceYear) return <section className="rollover-empty"><p className="academic-kicker">Academic operations</p><h1>Set a current academic year first</h1><p>The rollover workspace only operates from the authoritative current academic year.</p><Link className="rollover-secondary-button" href="/staff/academics/years">Manage academic years</Link></section>;
-  if (!data.targetYears.length) return <section className="rollover-empty"><p className="academic-kicker">Current year · {data.sourceYear.label}</p><h1>No eligible target year</h1><p>Create a planning academic year after {data.sourceYear.label} before starting a rollover.</p><Link className="rollover-secondary-button" href="/staff/academics/years">Manage academic years</Link></section>;
+  if (!data.targetYears.length && !completed) return <section className="rollover-empty"><p className="academic-kicker">Current year · {data.sourceYear.label}</p><h1>No eligible target year</h1><p>Create a planning academic year after {data.sourceYear.label} before starting a rollover.</p><Link className="rollover-secondary-button" href="/staff/academics/years">Manage academic years</Link></section>;
 
   return <>
     <header className="rollover-header staff-page-header"><div><p className="eyebrow">Academic operations</p><h1>Academic year rollover</h1><p>Review every active enrollment, resolve placements, then run the authoritative preflight before execution.</p></div><span className="rollover-admin-badge">Administrator workflow</span></header>
     <section className="rollover-year-card" aria-labelledby="rollover-years-heading"><div className="rollover-section-heading"><div><p className="academic-kicker">1 · Set the direction</p><h2 id="rollover-years-heading">Current year <span aria-hidden="true">→</span> target year</h2></div><span className="rollover-state-pill">{pending === "execute" ? "Executing" : pending === "preflight" ? "Preflight running" : confirmationOpen ? "Confirming execution" : completed ? "Completed" : preview?.ready ? "Preview ready" : "Configuring"}</span></div><div className="rollover-year-flow"><div className="rollover-year-panel rollover-year-current"><span>Current year</span><strong>{sourceLabel}</strong><small>{dateLabel(data.sourceYear.start_date)} – {dateLabel(data.sourceYear.end_date)} · Current</small></div><span className="rollover-flow-arrow" aria-hidden="true">→</span><label className="rollover-year-panel">Target planning year<select aria-label="Target planning academic year" disabled={pending !== null || Boolean(completed)} onChange={(event) => updateTargetYear(event.target.value)} value={targetYearId}>{data.targetYears.map((year) => <option key={year.id} value={year.id}>{year.label} · Planning</option>)}</select><small>Only planning years after the current year are available.</small></label></div></section>
     <section className="rollover-summary" aria-label="Rollover plan summary">{(["total", "promote", "repeat", "graduate", "exclude", "incomplete"] as const).map((key) => <article className={key === "incomplete" && summary.incomplete ? "rollover-summary-warning" : ""} key={key}><span>{key === "total" ? "Total students" : key === "incomplete" ? "Incomplete" : key[0].toUpperCase() + key.slice(1)}</span><strong>{summary[key]}</strong></article>)}</section>
     {error && <section className={`rollover-feedback rollover-feedback-${error.category}`} role="alert"><div><p className="academic-kicker">{errorTitle(error)}</p><p>{error.message}</p></div>{error.category === "stale_preview" && <button className="rollover-secondary-button" onClick={() => setError(null)} type="button">Review plan again</button>}</section>}
-    {completed ? <CompletionSummary result={completed} sourceLabel={sourceLabel} targetLabel={targetLabel} /> : <>
+    {completed ? <CompletionSummary result={completed.result} sourceLabel={completed.sourceLabel} targetLabel={completed.targetLabel} /> : <>
       <section className="rollover-workspace" aria-labelledby="rollover-students-heading"><header className="rollover-section-heading"><div><p className="academic-kicker">2 · Review every active enrollment</p><h2 id="rollover-students-heading">Student rollover plan</h2><p>Rows begin as Promote for review, but no plan can execute until required target placements are assigned. Exclude leaves a student unresolved; it does not deactivate, transfer, graduate, or delete them.</p></div><span className="rollover-visible-count">Showing {filteredRows.length} of {rows.length}</span></header>
         <div className="rollover-filters" aria-label="Filter and bulk tools"><label>Search students<input aria-label="Search students" onChange={(event) => setSearch(event.target.value)} placeholder="Name or admission number" value={search}/></label><label>Source class<select aria-label="Filter by source class" onChange={(event) => { setSourceClassId(event.target.value); setSourceSectionId(""); }} value={sourceClassId}><option value="">All source classes</option>{sourceClassIds.map((id) => <option key={id} value={id}>{classById.get(id)?.name ?? "Unknown class"}</option>)}</select></label><label>Source section<select aria-label="Filter by source section" onChange={(event) => setSourceSectionId(event.target.value)} value={sourceSectionId}><option value="">All source sections</option>{sourceSectionIds.map((id) => <option key={id} value={id}>{sectionById.get(id)?.name ?? "Unknown section"}</option>)}</select></label><label>Outcome filter<select aria-label="Filter by outcome" onChange={(event) => setOutcomeFilter(event.target.value as "all" | Outcome)} value={outcomeFilter}><option value="all">All outcomes</option>{outcomes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label></div>
         <div className="rollover-bulk-tools"><span>Bulk action for the {filteredRows.length} visible rows</span><select aria-label="Bulk outcome" disabled={pending !== null} onChange={(event) => setBulkOutcome(event.target.value as Outcome)} value={bulkOutcome}>{outcomes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><button className="rollover-secondary-button" disabled={pending !== null || !filteredRows.length} onClick={applyBulkOutcome} type="button">Apply outcome</button><small>This changes rows for review; it never executes the rollover.</small></div>
@@ -247,7 +266,7 @@ export function AcademicYearRolloverWorkspace({ data }: { data: AcademicRollover
         {!filteredRows.length && <p className="rollover-no-results">No students match the current filters.</p>}
       </section>
       {preview && <section className={`rollover-preview rollover-preview-${preview.ready ? "ready" : "blocked"}`} aria-live="polite"><header className="rollover-section-heading"><div><p className="academic-kicker">3 · Authoritative preflight</p><h2>{preview.ready ? "Plan ready for confirmation" : "Resolve authoritative blockers"}</h2><p>{preview.ready ? "The database accepted this exact plan for execution. Any edit will invalidate this preview." : "The database found blockers. Locate the affected rows, edit the plan, and run preflight again."}</p></div><span className="rollover-state-pill">{preview.ready ? "Ready" : "Blocked"}</span></header><div className="rollover-authoritative-counts"><span>Total <strong>{preview.total_count}</strong></span><span>Promote <strong>{preview.promote_count}</strong></span><span>Repeat <strong>{preview.repeat_count}</strong></span><span>Graduate <strong>{preview.graduate_count}</strong></span><span>Exclude <strong>{preview.exclude_count}</strong></span></div>{preview.errors.length > 0 && <ul className="rollover-blockers">{preview.errors.map((item, index) => { const affected = item.student_id ? rows.find((row) => row.student_id === item.student_id)?.student?.full_name : null; return <li key={`${item.code}-${item.student_id ?? index}`}><strong>{blockerLabel(item.code)}</strong>{affected && <span> · {affected}</span>}<small>{item.code}</small></li>; })}</ul>}{preview.ready && <button className="rollover-primary-button" disabled={pending !== null} onClick={() => setConfirmationOpen(true)} type="button">Review and confirm execution</button>}</section>}
-      <section className="rollover-preflight-actions"><div><p className="academic-kicker">{preview ? "Preview invalidated by edits" : "Before execution"}</p><p>{planComplete ? "Run the authoritative preflight when every row has a required placement." : `${summary.incomplete} row${summary.incomplete === 1 ? " is" : "s are"} missing a target class or section.`}</p></div><button className="rollover-primary-button" disabled={pending !== null || !planComplete} onClick={runPreflight} type="button">{pending === "preflight" ? "Running preflight…" : "Run preflight"}</button></section>
+      <section className="rollover-preflight-actions"><div><p className="academic-kicker">{preflightStatusLabel}</p><p>{preflightStatusCopy}</p></div><button className="rollover-primary-button" disabled={pending !== null || !planComplete} onClick={runPreflight} type="button">{pending === "preflight" ? "Running preflight…" : "Run preflight"}</button></section>
     </>}
     {confirmationOpen && preview?.ready && <div className="rollover-dialog-backdrop"><section aria-labelledby="rollover-confirm-heading" aria-modal="true" className="rollover-confirmation" role="dialog"><p className="academic-kicker">Final confirmation</p><h2 id="rollover-confirm-heading">Execute this academic rollover?</h2><p>This will complete the rollover, change enrollment placements, graduate selected students, close {sourceLabel}, and activate {targetLabel}. This cannot be undone through this workspace.</p><div className="rollover-confirmation-summary"><span>Total <strong>{preview.total_count}</strong></span><span>Promote <strong>{preview.promote_count}</strong></span><span>Repeat <strong>{preview.repeat_count}</strong></span><span>Graduate <strong>{preview.graduate_count}</strong></span><span>Exclude <strong>{preview.exclude_count}</strong></span></div><div className="rollover-confirmation-actions"><button autoFocus className="rollover-secondary-button" disabled={pending === "execute"} onClick={() => setConfirmationOpen(false)} type="button">Cancel</button><button className="rollover-danger-button" disabled={pending !== null} onClick={executeRollover} type="button">{pending === "execute" ? "Executing…" : "Execute rollover"}</button></div></section></div>}
   </>;

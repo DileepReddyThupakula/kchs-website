@@ -23,7 +23,8 @@ export type StaffNavigationItem = {
   href: string;
   icon: StaffNavigationIcon;
   label: string;
-  match?: string;
+  exactMatch?: string | string[];
+  match?: string | string[];
 };
 
 export type StaffNavigationSection = {
@@ -34,12 +35,6 @@ export type StaffNavigationSection = {
 };
 
 export const comingSoonModules = {
-  "academic-year": {
-    description: "Academic-year rollover and student-promotion tools will be available here.",
-    detail: "This module will support careful academic-year setup, promotion review and progression records.",
-    icon: "academic",
-    title: "Academic Year & Promotion",
-  },
   audit: {
     description: "Security and audit review will be available here.",
     detail: "This module will provide a controlled record of important administrative activity.",
@@ -123,9 +118,9 @@ export const staffNavigationSections: StaffNavigationSection[] = [
     icon: "academic",
     label: "Academics",
     items: [
-      { adminOnly: true, href: "/staff/academics", icon: "academic", label: "Classes & Sections", match: "/staff/academics" },
+      { adminOnly: true, href: "/staff/academics", icon: "academic", label: "Classes & Sections", exactMatch: "/staff/academics", match: ["/staff/academics/classes", "/staff/academics/sections", "/staff/academics/subjects"] },
       { adminOnly: true, href: "/staff/timetable", icon: "timetable", label: "Timetable" },
-      { adminOnly: true, href: "/staff/academic-year", icon: "academic", label: "Academic Year & Promotion" },
+      { adminOnly: true, href: "/staff/academics/years", icon: "academic", label: "Academic Year & Promotion", match: ["/staff/academics/years", "/staff/academics/rollover"] },
     ],
   },
   {
@@ -168,6 +163,7 @@ export function isComingSoonSlug(value: string): value is ComingSoonSlug {
 
 export function isStaffNavigationActive(pathname: string, item: StaffNavigationItem) {
   if (item.href === "/staff") return pathname === "/staff";
-  const match = item.match ?? item.href;
-  return pathname === match || pathname.startsWith(`${match}/`);
+  const exactMatches = item.exactMatch ? (Array.isArray(item.exactMatch) ? item.exactMatch : [item.exactMatch]) : [];
+  const matches = item.match ? (Array.isArray(item.match) ? item.match : [item.match]) : [item.href];
+  return exactMatches.includes(pathname) || matches.some((match) => pathname === match || pathname.startsWith(`${match}/`));
 }

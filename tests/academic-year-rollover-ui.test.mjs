@@ -61,16 +61,32 @@ test("summary includes total, four outcomes, and incomplete counts", () => {
   assert.match(workspace, /Rollover plan summary/);
 });
 
-test("preflight uses the server action and stores the exact plan with the fingerprint", () => {
+test("successful preflight produces one consistent current preview state", () => {
   assert.match(workspace, /preflightAcademicYearRolloverAction\(plan\)/);
   assert.match(workspace, /setPreview\(result\.data\)/);
   assert.match(workspace, /setPreflightPlan\(plan\)/);
+  assert.match(workspace, /setPreviewInvalidated\(false\)/);
+  assert.match(workspace, /preflightStatusLabel = previewInvalidated \? "Preview invalidated by edits" : preview\?\.ready \? "Preview current"/);
+  assert.doesNotMatch(workspace, /preview \? "Preview invalidated by edits"/);
   assert.match(workspace, /preview\.fingerprint/);
+});
+
+test("only an execution-relevant edit after a ready preview shows invalidation", () => {
+  assert.match(workspace, /const hadReadyPreview = Boolean\(preview\?\.ready && preflightPlan\)/);
+  assert.match(workspace, /setPreviewInvalidated\(hadReadyPreview\)/);
+  assert.match(workspace, /function editRows\(updater/);
+  assert.match(workspace, /editRows\(\(current\) => current\.map/);
 });
 
 test("execution requires a ready preview and the stored plan", () => {
   assert.match(workspace, /if \(!preview\?\.ready \|\| !preflightPlan\) return/);
   assert.match(workspace, /executeAcademicYearRolloverAction\(\{ \.\.\.preflightPlan, expectedFingerprint: preview\.fingerprint \}\)/);
+  assert.match(workspace, /setPreviewInvalidated\(false\)/);
+});
+
+test("an edit-invalidated preview cannot execute", () => {
+  assert.match(workspace, /setPreview\(null\);\n    setPreflightPlan\(null\);/);
+  assert.match(workspace, /if \(!preview\?\.ready \|\| !preflightPlan\) return/);
 });
 
 test("any plan edit invalidates the preflight", () => {
@@ -111,10 +127,20 @@ test("sanitized failures and authoritative blockers are surfaced", () => {
 });
 
 test("successful execution renders a durable completion summary", () => {
+  assert.match(workspace, /setCompleted\(\{ result: result\.data, sourceLabel, targetLabel \}\)/);
+  assert.match(workspace, /if \(!data\.targetYears\.length && !completed\)/);
   assert.match(workspace, /Academic rollover complete/);
   assert.match(workspace, /result\.status/);
   assert.match(workspace, /result\.idempotent_replay/);
   assert.match(workspace, /Review enrollments/);
+});
+
+test("completion feedback uses the validated server result and preserves captured labels", () => {
+  assert.match(workspace, /if \(result\.ok\)/);
+  assert.match(workspace, /result: AcademicRolloverExecutionResult/);
+  assert.match(workspace, /<CompletionSummary result=\{completed\.result\} sourceLabel=\{completed\.sourceLabel\} targetLabel=\{completed\.targetLabel\}/);
+  assert.match(workspace, /result\.total_count/);
+  assert.match(workspace, /result\.graduate_count/);
 });
 
 test("student display remains limited to administrative identifiers", () => {
