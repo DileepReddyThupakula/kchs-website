@@ -154,10 +154,42 @@ test("preview action is read-only and protected, and template route is admin-onl
   assert.match(action, /requireAdmin/);
   assert.match(action, /\.select\("admission_number", \{ count: "exact" \}\)/);
   assert.match(action, /databasePreflight/);
-  assert.doesNotMatch(action, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/);
+  const previewSource = action.slice(action.indexOf("export async function previewStudentImport"), action.indexOf("export async function createStudentBulkImport"));
+  assert.doesNotMatch(previewSource, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/);
   assert.match(page, /requireAdmin/);
   assert.match(template, /getCurrentStaff/);
   assert.match(template, /staff\.role !== "admin"/);
+});
+
+test("final import action requires confirmation and uses a strict seven-field RPC payload", () => {
+  const action = readFileSync(new URL("../app/staff/students/import/actions.ts", import.meta.url), "utf8");
+  const workspace = readFileSync(new URL("../components/student-bulk-import-workspace.tsx", import.meta.url), "utf8");
+  assert.match(action, /createStudentBulkImport/);
+  assert.match(action, /formData\.get\("confirm"\) !== "on"/);
+  assert.match(action, /z\.array\(importRowSchema\)\.min\(1\)\.max\(2_000\)/);
+  assert.match(action, /\.strict\(\)/);
+  for (const field of ["full_name", "admission_number", "admission_date", "date_of_birth", "gender", "roll_number", "enrollment_date"]) {
+    assert.match(action, new RegExp(`${field}:`));
+    assert.match(action, new RegExp(`${field}: row\.values\.${field}`));
+  }
+  assert.match(action, /resolvePlacement\(supabase, ids\.data\)/);
+  assert.match(action, /readExistingKeys\(supabase, ids\.data\.academic_section_id\)/);
+  assert.match(action, /validateStudentImportRows\(parsedRows, placement, existing\.keys\)/);
+  assert.match(action, /supabase\.rpc\("create_students_with_enrollments"/);
+  assert.match(action, /p_rows: rpcRows/);
+  assert.match(action, /p_academic_year_id: ids\.data\.academic_year_id/);
+  assert.match(action, /p_class_id: ids\.data\.class_id/);
+  assert.match(action, /p_academic_section_id: ids\.data\.academic_section_id/);
+  assert.match(action, /code === "23505"/);
+  assert.match(action, /code === "42501"/);
+  assert.match(action, /operation: "createStudentBulkImport", code: error\.code/);
+  assert.doesNotMatch(action, /operation: "(?:previewStudentImport|createStudentBulkImport)"[^}]*message:/);
+  assert.doesNotMatch(action, /service_role|SERVICE_ROLE|SUPABASE_SERVICE_ROLE/);
+  assert.match(workspace, /name="confirm"/);
+  assert.match(workspace, /Import students/);
+  assert.match(workspace, /importState\.message/);
+  assert.match(workspace, /pending/);
+  assert.match(workspace, /setPreviewInvalidated\(true\)/);
 });
 
 test("existing single-student creation and directory contracts remain present", () => {
