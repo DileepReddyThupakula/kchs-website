@@ -97,14 +97,23 @@ test("successful execution revalidates only affected staff academic and student 
 
 test("workspace loader is admin-only and minimizes student data", () => {
   assert.match(source, /getAcademicYearRolloverWorkspaceData/);
-  assert.match(source, /select\("id,admission_number,full_name,status"\)/);
+  assert.match(source, /rpc\("get_academic_year_rollover_workspace"\)/);
+  assert.match(source, /academic-rollover-workspace-query/);
+  assert.match(source, /workspaceDataSchema/);
   assert.doesNotMatch(source, /guardian|phone|address|email/);
 });
 
-test("workspace data is read-only and limited to current/planning academic structure", () => {
-  assert.match(source, /\.in\("status", \["current", "planning"\]\)/);
-  assert.match(source, /\.eq\("status", "active"\)/);
+test("workspace loader uses one authoritative read boundary", () => {
+  const workspace = source.slice(source.indexOf("export async function getAcademicYearRolloverWorkspaceData"));
+  assert.equal((workspace.match(/\.rpc\(/g) ?? []).length, 1);
+  assert.doesNotMatch(workspace, /\.from\("academic_years"\)|\.from\("school_classes"\)|\.from\("academic_sections"\)|\.from\("student_enrollments"\)|\.from\("students"\)/);
+  assert.doesNotMatch(workspace, /academic-rollover-years-query-wave|academic-rollover-structure-query-wave|academic-rollover-students-query-wave/);
+});
+
+test("workspace integration remains read-only and preserves the authoritative mutation boundaries", () => {
   assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(/);
+  assert.match(source, /preflight_academic_year_rollover/);
+  assert.match(source, /execute_academic_year_rollover/);
 });
 
 test("rollover integration has no direct enrollment mutation path", () => {
