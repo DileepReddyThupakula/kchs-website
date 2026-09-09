@@ -11,7 +11,7 @@ import { isStaffNavigationActive, staffNavigationSections, type StaffNavigationI
 function NavigationLink({ item, pathname }: { item: StaffNavigationItem; pathname: string }) {
   const active = isStaffNavigationActive(pathname, item);
   const { closeSidebar } = useStaffPortalShell();
-  return <Link aria-current={active ? "page" : undefined} className={active ? "staff-nav-current" : undefined} href={item.href} onClick={closeSidebar} title={item.label}><PortalIcon icon={item.icon}/><span>{item.label}</span></Link>;
+  return <Link aria-current={active ? "page" : undefined} className={active ? "staff-nav-current" : undefined} href={item.href} onClick={closeSidebar} prefetch={false} title={item.label}><PortalIcon icon={item.icon}/><span>{item.label}</span></Link>;
 }
 
 export function StaffNavigation({ role }: { role: "admin" | "staff" }) {

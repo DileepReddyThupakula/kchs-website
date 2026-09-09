@@ -92,10 +92,13 @@ test("staff navigation remains Next Link based and rollover discovery remains in
   const navigation = source("components/staff-navigation.tsx");
   const navigationConfig = source("lib/staff-navigation.ts");
   const years = source("app/staff/academics/years/page.tsx");
+  const navigationLink = navigation.slice(navigation.indexOf("function NavigationLink"), navigation.indexOf("export function StaffNavigation"));
+  const publicNavigation = navigation.slice(navigation.indexOf("staff-nav-public"));
   assert.match(navigation, /import Link from "next\/link"/);
-  assert.match(navigation, /<Link[\s\S]*href=\{item\.href\}/);
+  assert.match(navigationLink, /<Link[\s\S]*href=\{item\.href\}[\s\S]*prefetch=\{false\}/);
+  assert.match(navigationLink, /prefetch=\{false\}/);
+  assert.doesNotMatch(publicNavigation, /prefetch=\{false\}/);
   assert.doesNotMatch(navigation, /<a\b/);
-  assert.doesNotMatch(navigation, /prefetch=/);
   assert.match(navigationConfig, /href: "\/staff\/academics\/years"/);
   assert.match(navigationConfig, /"\/staff\/academics\/rollover"/);
   assert.match(years, /\/staff\/academics\/rollover/);
